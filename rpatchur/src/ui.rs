@@ -7,8 +7,11 @@ use serde::Deserialize;
 use serde_json::Value;
 use tinyfiledialogs as tfd;
 use web_view::{Content, Handle, WebView};
+#[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
+#[cfg(windows)]
 use winapi::shared::windef::HWND;
+#[cfg(windows)]
 use winapi::um::winuser::{
     GetWindowLongA, ReleaseCapture, SendMessageA, SetLayeredWindowAttributes, SetWindowLongA,
     FindWindowA, GWL_EXSTYLE, HTCAPTION, LWA_COLORKEY, SW_MINIMIZE, WM_NCLBUTTONDOWN,
@@ -134,6 +137,7 @@ pub fn build_webview<'a>(
         })
         .build();
 
+    #[cfg(windows)]
     if let Ok(webview) = &webview {
         if let Some(hex_color) = &webview.user_data().patcher_config.window.transparent_color_hex {
             let title = &webview.user_data().patcher_config.window.title;
@@ -369,6 +373,7 @@ fn start_game_client(webview: &mut WebView<WebViewUserData>, client_arguments: &
     }
 }
 
+#[cfg(windows)]
 fn handle_minimize(webview: &mut WebView<WebViewUserData>) {
     let title = &webview.user_data().patcher_config.window.title;
     if let Ok(c_title) = CString::new(title.as_str()) {
@@ -381,6 +386,12 @@ fn handle_minimize(webview: &mut WebView<WebViewUserData>) {
     }
 }
 
+#[cfg(not(windows))]
+fn handle_minimize(_webview: &mut WebView<WebViewUserData>) {
+    log::warn!("Minimize is not supported on this platform.");
+}
+
+#[cfg(windows)]
 fn handle_start_drag(webview: &mut WebView<WebViewUserData>) {
     let title = &webview.user_data().patcher_config.window.title;
     if let Ok(c_title) = CString::new(title.as_str()) {
@@ -394,6 +405,12 @@ fn handle_start_drag(webview: &mut WebView<WebViewUserData>) {
     }
 }
 
+#[cfg(not(windows))]
+fn handle_start_drag(_webview: &mut WebView<WebViewUserData>) {
+    log::warn!("Start drag is not supported on this platform.");
+}
+
+#[cfg(windows)]
 fn apply_transparency(hwnd: HWND, hex_color: &str) {
     let color = u32::from_str_radix(hex_color, 16).unwrap_or(0xFF00FF);
     // Convert RGB hex to BGR for Windows
