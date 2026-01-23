@@ -4,6 +4,13 @@ window:
   width: 780        # Width of the main window (in pixels)
   height: 580       # Height of the main window (in pixels)
   resizable: false  # Make the main window resizable
+  # Funcionalidades extras:
+  frameless: true                 # Oculta bordas e barra de título
+  transparent_color_hex: "FF00FF" # Define cor para transparência (janelas com formatos customizados)
+
+# Comandos JavaScript para UI (janelas sem borda)
+# minimize   -> external.invoke('minimize')
+# start_drag -> external.invoke('start_drag') (chamar no mousedown)
 
 # Configure the Play button’s behavior
 play:
@@ -18,7 +25,7 @@ setup:
   exit_on_success: false  # (Optional) Exit the patcher when the setup software starts. Defaults to `false`
 
 web:
-  index_url: https://myserver.com/index.html  # URL of the web page to use as the UI
+  index_url: bootstrap/index.html  # URL of the web page to use as the UI
   preferred_patch_server: US Patch Server     # (Optional) Patch server to try first
   patch_servers:
     - name: EU Patch Server                          # Name that identifies the patch server

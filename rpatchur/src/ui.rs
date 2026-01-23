@@ -7,6 +7,14 @@ use serde::Deserialize;
 use serde_json::Value;
 use tinyfiledialogs as tfd;
 use web_view::{Content, Handle, WebView};
+use winapi::shared::minwindef::DWORD;
+use winapi::shared::windef::HWND;
+use winapi::um::winuser::{
+    GetWindowLongA, ReleaseCapture, SendMessageA, SetLayeredWindowAttributes, SetWindowLongA,
+    FindWindowA, GWL_EXSTYLE, HTCAPTION, LWA_COLORKEY, SW_MINIMIZE, WM_NCLBUTTONDOWN,
+    WS_EX_LAYERED,
+};
+use std::ffi::CString;
 
 /// 'Opaque" struct that can be used to update the UI.
 pub struct UiController {
@@ -99,7 +107,7 @@ pub fn build_webview<'a>(
     title: &'a str,
     user_data: WebViewUserData,
 ) -> web_view::WVResult<WebView<'a, WebViewUserData>> {
-    web_view::builder()
+    let webview = web_view::builder() // Assign to variable
         .title(title)
         .content(Content::Url(user_data.patcher_config.web.index_url.clone()))
         .size(
@@ -107,6 +115,7 @@ pub fn build_webview<'a>(
             user_data.patcher_config.window.height,
         )
         .resizable(user_data.patcher_config.window.resizable)
+        .frameless(user_data.patcher_config.window.frameless.unwrap_or(false))
         .user_data(user_data)
         .invoke_handler(|webview, arg| {
             match arg {
@@ -117,11 +126,29 @@ pub fn build_webview<'a>(
                 "cancel_update" => handle_cancel_update(webview),
                 "reset_cache" => handle_reset_cache(webview),
                 "manual_patch" => handle_manual_patch(webview),
+                "minimize" => handle_minimize(webview),
+                "start_drag" => handle_start_drag(webview),
                 request => handle_json_request(webview, request),
             }
             Ok(())
         })
-        .build()
+        .build();
+
+    if let Ok(webview) = &webview {
+        if let Some(hex_color) = &webview.user_data().patcher_config.window.transparent_color_hex {
+            let title = &webview.user_data().patcher_config.window.title;
+            if let Ok(c_title) = CString::new(title.as_str()) {
+                unsafe {
+                    let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
+                    if !hwnd.is_null() {
+                        apply_transparency(hwnd, hex_color);
+                    }
+                }
+            }
+        }
+    }
+
+    webview
 }
 
 /// Opens the configured game client with the configured arguments.
@@ -339,5 +366,45 @@ fn start_game_client(webview: &mut WebView<WebViewUserData>, client_arguments: &
         Err(e) => {
             log::warn!("Failed to start client: {}", e);
         }
+    }
+}
+
+fn handle_minimize(webview: &mut WebView<WebViewUserData>) {
+    let title = &webview.user_data().patcher_config.window.title;
+    if let Ok(c_title) = CString::new(title.as_str()) {
+        unsafe {
+            let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
+            if !hwnd.is_null() {
+                winapi::um::winuser::ShowWindow(hwnd, SW_MINIMIZE);
+            }
+        }
+    }
+}
+
+fn handle_start_drag(webview: &mut WebView<WebViewUserData>) {
+    let title = &webview.user_data().patcher_config.window.title;
+    if let Ok(c_title) = CString::new(title.as_str()) {
+        unsafe {
+            let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
+            if !hwnd.is_null() {
+                ReleaseCapture();
+                SendMessageA(hwnd, WM_NCLBUTTONDOWN, HTCAPTION as usize, 0);
+            }
+        }
+    }
+}
+
+fn apply_transparency(hwnd: HWND, hex_color: &str) {
+    let color = u32::from_str_radix(hex_color, 16).unwrap_or(0xFF00FF);
+    // Convert RGB hex to BGR for Windows
+    let r = (color >> 16) & 0xFF;
+    let g = (color >> 8) & 0xFF;
+    let b = color & 0xFF;
+    let color_key = (b << 16) | (g << 8) | r;
+
+    unsafe {
+        let ex_style = GetWindowLongA(hwnd, GWL_EXSTYLE);
+        SetWindowLongA(hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED as i32);
+        SetLayeredWindowAttributes(hwnd, color_key as DWORD, 0, LWA_COLORKEY);
     }
 }

@@ -46,6 +46,13 @@ window:
   title: Meu Servidor   # Título da janela
   width: 780
   height: 580
+  # Funcionalidades extras:
+  frameless: true                 # Oculta bordas e barra de título
+  transparent_color_hex: "FF00FF" # Define cor para transparência (janelas com formatos customizados)
+
+# Comandos JavaScript para UI (janelas sem borda)
+# minimize   -> external.invoke('minimize')
+# start_drag -> external.invoke('start_drag') (chamar no mousedown)
 
 play:
   path: ragexe.exe      # Nome do executável do seu jogo

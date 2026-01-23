@@ -22,6 +22,8 @@ pub struct WindowConfiguration {
     pub width: i32,
     pub height: i32,
     pub resizable: bool,
+    pub frameless: Option<bool>,
+    pub transparent_color_hex: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
