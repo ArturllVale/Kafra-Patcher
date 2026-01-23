@@ -1,92 +1,132 @@
-RPatchur
-========
+# RPatchur
 
-[![Build Status](https://travis-ci.org/L1nkZ/rpatchur.svg?branch=master)](https://travis-ci.org/L1nkZ/rpatchur)
-[![Build status](https://ci.appveyor.com/api/projects/status/uxhueyysdy7f7o9f/branch/master?svg=true)](https://ci.appveyor.com/project/L1nkZ/rpatchur/branch/master)
+[![Rust](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml/badge.svg)](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml)
 
-`rpatchur` is a customizable, cross-platform patcher for Ragnarok Online clients.
+`rpatchur` é um atualizador (patcher) customizável e multiplataforma para clientes Ragnarok Online.
 
-Features
---------
+## Funcionalidades
 
-* Customizable, web-based UI
-* Configurable through an external YAML file
-* HTTP/HTTPS support
-* GRF file patching (version 0x101, 0x102, 0x103 and 0x200)
-* THOR patch format support
-* Drop-in replacement for the Thor patcher
-* SSO login support (i.e., can act as a launcher)
-* Manual patching
-* Can use multiple patch mirrors
-* Cross-platform (Windows, Linux, macOS)
+* Interface de usuário (UI) baseada na web e customizável
+* Configurável através de um arquivo YAML externo
+* Suporte a HTTP/HTTPS
+* Aplicação de patches em arquivos GRF (versões 0x101, 0x102, 0x103 e 0x200)
+* Suporte ao formato de patch THOR
+* Substituto direto para o Thor Patcher
+* Suporte a login SSO (pode atuar como um launcher)
+* Aplicação manual de patches
+* Pode utilizar múltiplos espelhos (mirrors) de patch
+* Multiplataforma (Windows, Linux, macOS)
 
-Known Limitations
------------------
+## Limitações Conhecidas
 
-* None known at the moment.
+* Nenhuma conhecida no momento.
 
-
-Screenshot
-----------
+## Screenshot
 
 ![screen](https://i.imgur.com/mE51Iif.png)
 
-Documentation
--------------
+## Documentação
 
-You can find the project's documentation [here](https://l1nkz.github.io/rpatchur/).
+Você pode encontrar a documentação original do projeto [aqui](https://l1nkz.github.io/rpatchur/).
 
-Examples
---------
+## Guia para Iniciantes
 
-You can find example files for the UI and the configuration file in the
-`examples` directory.
+Se você não tem muita experiência com programação ou com a configuração de servidores de Ragnarok, siga este guia básico para começar.
 
-Building
---------
+### O que o RPatchur faz?
+Ele verifica um arquivo de lista de atualizações (geralmente chamado `plist.txt`) hospedado no seu site, baixa os arquivos necessários e os aplica ao jogo do usuário.
 
-The `rpatchur` directory contains the actual patcher code (UI, archive merging, etc.).
+### Passo 1: Configuração do Patcher (`rpatchur.yml`)
+O arquivo `rpatchur.yml` é onde você diz ao patcher onde buscar as atualizações e qual executável do jogo abrir. Ele deve ficar na mesma pasta do executável do `rpatchur`.
 
-The `mkpatch` directory contains a THOR patch archive generation utility.
+Exemplo básico de configuração:
 
-The `gruf` directory contains the core library for parsing and building GRF and THOR archives.
+```yaml
+window:
+  title: Meu Servidor   # Título da janela
+  width: 780
+  height: 580
 
+play:
+  path: ragexe.exe      # Nome do executável do seu jogo
+  arguments: ["1sak1"]  # Argumentos (se necessário)
 
-To clone the repository and build everything, simply run:
+web:
+  # Página HTML que será exibida dentro do patcher (suas notícias, banner, etc)
+  index_url: https://meuservidor.com/patcher/index.html
+  
+  # Configuração de onde baixar os arquivos
+  patch_servers:
+    - name: Servidor Principal
+      # Arquivo de texto contendo a lista de patches (ex: 1.thor, 2.thor)
+      plist_url: https://meuservidor.com/patcher/plist.txt
+      # Pasta onde estão os arquivos .thor ou .grf
+      patch_url: https://meuservidor.com/patcher/data/
+
+client:
+  default_grf_name: meuservidor.grf  # Nome do seu GRF principal
 ```
-$ git clone https://github.com/L1nkZ/rpatchur.git
-$ cd rpatchur
+
+### Passo 2: Criando Patches
+Para atualizar o jogo dos jogadores, você precisa criar arquivos de patch. Este projeto inclui uma ferramenta chamada `mkpatch` para isso.
+
+1. Crie um arquivo `patch.yml` definindo o que vai mudar (veja `examples/patch.yml` para inspiração).
+2. Use o utilitário `mkpatch` (que você precisa compilar ou baixar) para gerar o arquivo `.thor`.
+
+Exemplo de `patch.yml`:
+```yaml
+use_grf_merging: true          # true para colocar arquivos dentro do GRF
+target_grf_name: meuservidor.grf
+
+entries:
+  - relative_path: data\clientinfo.xml # Arquivo local para adicionar
+    in_grf_path: data\clientinfo.xml   # Caminho dentro do GRF
+```
+
+### Passo 3: Hospedando os Arquivos
+No seu servidor web (hospedagem de site), você precisa ter uma estrutura assim:
+
+* `index.html`: A página bonitinha que aparece no patcher.
+* `plist.txt`: Uma lista simples com os números/nomes dos patches.
+* `data/`: Uma pasta com os arquivos `.thor` gerados.
+
+Exemplo de `plist.txt`:
+```
+1.thor
+2.thor
+updates_jan.thor
+```
+
+## Exemplos
+
+Você pode encontrar arquivos de exemplo para a interface e configuração na pasta `examples`.
+
+## Compilação (Building)
+
+O diretório `rpatchur` contém o código do patcher (UI, fusão de arquivos, etc).
+O diretório `mkpatch` contém o utilitário de geração de patches THOR.
+O diretório `gruf` contém a biblioteca principal para leitura e escrita de arquivos GRF e THOR.
+
+Para clonar o repositório e compilar tudo, execute:
+```bash
+$ git clone https://github.com/ArturllVale/rpatchur_v2.git
+$ cd rpatchur_v2
 $ cargo build --release
 ```
 
-Note: Rust 1.49 or later is required.
+Nota: Rust 1.49 ou superior é necessário.
 
-Note: For targetting 32bit Windows when building on a 64bit system, you need to manually add the target with `rustup target add i686-pc-windows-msvc`. You can now run:
-```
+Para compilar para Windows 32-bit em um sistema 64-bit:
+```bash
+$ rustup target add i686-pc-windows-msvc
 $ cargo build --target=i686-pc-windows-msvc --release
 ```
 
-### Cross Compilation
+### Compilação Cruzada (Cross Compilation)
 
-It is recommended to build the project on the platform that you target. However,
-for those of you who'd like to compile from Linux and distribute to Windows,
-there's a `Dockerfile` [here](docker). This `Dockerfile` builds a Docker image
-that can be used to easily cross-compile the project from Linux to Windows.
+Recomenda-se compilar na plataforma de destino. No entanto, há um `Dockerfile` na pasta `docker` para facilitar a compilação do Linux para Windows.
 
-Note: The executable's icon and description will be missing for cross compiled
-builds.
+## Licença
 
-Additional Notes
-----------------
+Copyright (c) 2020-2026 desenvolvedores rpatchur e mantenedor: Lumen#0110
 
-The icon used for Windows executables was taken from
-[rathena.org](https://rathena.org/board/files/file/3190-s1-lykos-icon-pack/).
-
-License
--------
-
-Copyright (c) 2020-2021 rpatchur developers
-
-`rpatchur` is distributed under the terms of both the MIT License and the Apache License 2.0.
-
-See the [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) files for license details.
