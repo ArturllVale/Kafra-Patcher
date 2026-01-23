@@ -28,6 +28,7 @@ enum DataTransformation {
     // DecompressZlib,
 }
 
+#[allow(dead_code)]
 struct MergeEntry {
     pub source: MergeEntrySource,
     pub source_offset: u64,
@@ -96,7 +97,7 @@ fn apply_grf_to_grf_oop(
     
     // Add files from the original archive
     let mut target_archive = GrfArchive::open(&backup_file_path)?;
-    let (major, minor) = (target_archive.version_major(), target_archive.version_minor());
+    let (_major, _minor) = (target_archive.version_major(), target_archive.version_minor());
 
     for entry in target_archive.get_entries() {
         // If file exists in patch, skip it (it will be overwritten)

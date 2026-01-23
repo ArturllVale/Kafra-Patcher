@@ -4,3 +4,6 @@ panic = 'abort'
 
 [workspace]
 members = ["gruf", "rpatchur", "mkpatch"]
+
+[patch.crates-io]
+webview-sys = { path = "./vendor/webview-sys" }

@@ -7,16 +7,16 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
-use advisory_lock::{AdvisoryFileLock, FileLockMode};
+// use advisory_lock::{AdvisoryFileLock, FileLockMode};
 use anyhow::{anyhow, Context, Result};
 use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::stream::{StreamExt, TryStreamExt};
-use gruf::grf::{GrfArchive, GrfArchiveBuilder};
+use gruf::grf::GrfArchive;
 use gruf::thor::{self, ThorArchive, ThorPatchInfo, ThorPatchList};
 use gruf::GrufError;
 use tokio::fs::File;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use url::Url;
 
 use super::cache::{read_cache_file, write_cache_file, PatcherCache};
@@ -27,6 +27,7 @@ use super::config::PatchServerInfo;
 use super::patching::{apply_patch_to_disk, apply_patch_to_grf, GrfPatchingMethod};
 use super::{get_patcher_name, PatcherCommand, PatcherConfiguration};
 use crate::ui::{PatchingStatus, UiController};
+use crate::patcher::patching::apply_grf_to_grf;
 
 /// Representation of a pending patch (a patch that's been downloaded but has
 /// not been applied yet).
@@ -170,7 +171,7 @@ fn apply_single_patch(
 fn take_update_lock() -> Result<std::fs::File> {
     let lock_file_name = get_update_lock_file_path()?;
     let lock_file = std::fs::File::create(lock_file_name)?;
-    lock_file.try_lock(FileLockMode::Exclusive)?;
+    lock_file.try_lock()?;
 
     Ok(lock_file)
 }
@@ -688,7 +689,7 @@ mod tests {
     use super::*;
     use httptest::{matchers::*, responders::*, Expectation, Server};
     use std::io::SeekFrom;
-    use tokio::io::AsyncReadExt;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
     #[tokio::test]
     async fn test_download_path_to_file() {
