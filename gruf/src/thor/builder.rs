@@ -107,6 +107,8 @@ impl<W: Write + Seek> ThorArchiveBuilder<W> {
                     offset,
                     size: u32::try_from(data_size)?,
                     size_compressed: u32::try_from(compressed_data_size)?,
+                    size_compressed_aligned: u32::try_from(compressed_data_size)?,
+                    entry_type: 1,
                 },
                 checksum: data_checksum,
             }),

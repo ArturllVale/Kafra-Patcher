@@ -23,11 +23,8 @@ Features
 Known Limitations
 -----------------
 
-* Can only build GRF files in version 0x200
-* Cannot automatically update the patcher executable
-* No support for `RGZ` and `GPF` patch formats
-* Cannot patch GRF files containing multiple entries pointing to the same
-offset
+* None known at the moment.
+
 
 Screenshot
 ----------

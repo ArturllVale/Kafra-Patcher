@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
@@ -15,8 +16,9 @@ pub enum GrfPatchingMethod {
 
 /// Indicates the type of archive a "file" comes from.
 enum MergeEntrySource {
-    GrfArchive,
-    ThorArchive,
+    TargetGrf,
+    PatchThor,
+    PatchGrf,
 }
 
 /// Indicates the transformation that should be applied to the data when copied
@@ -49,6 +51,101 @@ pub fn apply_patch_to_grf<R: Read + Seek>(
         GrfPatchingMethod::InPlace => apply_patch_to_grf_ip(grf_file_path, thor_archive),
         GrfPatchingMethod::OutOfPlace => apply_patch_to_grf_oop(grf_file_path, thor_archive),
     }
+}
+
+/// Patches a GRF file with another GRF archive/patch.
+pub fn apply_grf_to_grf(
+    patching_method: GrfPatchingMethod,
+    create_if_needed: bool,
+    target_grf_path: impl AsRef<Path>,
+    source_grf: &mut GrfArchive,
+) -> Result<()> {
+    if !target_grf_path.as_ref().exists() && create_if_needed {
+        let new_grf = fs::File::create(&target_grf_path)?;
+        GrfArchiveBuilder::create(new_grf, 2, 0)?;
+    }
+    match patching_method {
+        GrfPatchingMethod::InPlace => apply_grf_to_grf_ip(target_grf_path, source_grf),
+        GrfPatchingMethod::OutOfPlace => apply_grf_to_grf_oop(target_grf_path, source_grf),
+    }
+}
+
+fn apply_grf_to_grf_ip(
+    target_grf_path: impl AsRef<Path>,
+    source_grf: &mut GrfArchive,
+) -> Result<()> {
+    let mut builder = GrfArchiveBuilder::open(target_grf_path)?;
+    let entries: Vec<String> = source_grf.get_entries().map(|e| e.relative_path.clone()).collect();
+    for path in entries {
+        builder.import_raw_entry_from_grf(source_grf, path)?;
+    }
+    Ok(())
+}
+
+fn apply_grf_to_grf_oop(
+    target_grf_path: impl AsRef<Path>,
+    source_grf: &mut GrfArchive,
+) -> Result<()> {
+    // Rename file to back it up
+    let mut backup_file_path = target_grf_path.as_ref().to_path_buf();
+    backup_file_path.set_extension("grf.bak");
+    fs::rename(target_grf_path.as_ref(), &backup_file_path)?;
+
+    // Prepare file entries that'll be used to make the patched GRF
+    let mut merge_entries: HashMap<String, MergeEntry> = HashMap::new();
+    
+    // Add files from the original archive
+    let mut target_archive = GrfArchive::open(&backup_file_path)?;
+    let (major, minor) = (target_archive.version_major(), target_archive.version_minor());
+
+    for entry in target_archive.get_entries() {
+        // If file exists in patch, skip it (it will be overwritten)
+        if source_grf.get_file_entry(&entry.relative_path).is_some() {
+            continue;
+        }
+        merge_entries.insert(
+            entry.relative_path.clone(),
+            MergeEntry {
+                source: MergeEntrySource::TargetGrf,
+                source_offset: entry.offset,
+                data_size: entry.size_compressed,
+                transformation: DataTransformation::None,
+            },
+        );
+    }
+    
+    // Add files from the patch
+    for entry in source_grf.get_entries() {
+        merge_entries.insert(
+            entry.relative_path.clone(),
+            MergeEntry {
+                source: MergeEntrySource::PatchGrf,
+                source_offset: entry.offset,
+                data_size: entry.size_compressed,
+                transformation: DataTransformation::None,
+            },
+        );
+    }
+
+    {
+        let grf_file = fs::File::create(target_grf_path)?;
+        let mut builder = GrfArchiveBuilder::create(grf_file, 2, 0)?;
+        for (relative_path, entry) in merge_entries {
+            match entry.source {
+                MergeEntrySource::TargetGrf => {
+                    builder.import_raw_entry_from_grf(&mut target_archive, relative_path)?;
+                }
+                MergeEntrySource::PatchThor => {
+                    unreachable!("Thor patch source in GRF patching");
+                }
+                MergeEntrySource::PatchGrf => {
+                    builder.import_raw_entry_from_grf(source_grf, relative_path)?;
+                }
+            }
+        }
+    }
+    // Remove backup file
+    Ok(fs::remove_file(backup_file_path)?)
 }
 
 /// Patches a GRF in an in-place manner.
@@ -101,7 +198,7 @@ fn apply_patch_to_grf_oop<R: Read + Seek>(
         merge_entries.insert(
             entry.relative_path.clone(),
             MergeEntry {
-                source: MergeEntrySource::GrfArchive,
+                source: MergeEntrySource::TargetGrf,
                 source_offset: entry.offset,
                 data_size: entry.size_compressed,
                 transformation: DataTransformation::None,
@@ -116,7 +213,7 @@ fn apply_patch_to_grf_oop<R: Read + Seek>(
         merge_entries.insert(
             entry.relative_path.clone(),
             MergeEntry {
-                source: MergeEntrySource::ThorArchive,
+                source: MergeEntrySource::PatchThor,
                 source_offset: entry.offset,
                 data_size: entry.size_compressed,
                 transformation: DataTransformation::None,
@@ -129,11 +226,14 @@ fn apply_patch_to_grf_oop<R: Read + Seek>(
         let mut builder = GrfArchiveBuilder::create(grf_file, 2, 0)?;
         for (relative_path, entry) in merge_entries {
             match entry.source {
-                MergeEntrySource::GrfArchive => {
+                MergeEntrySource::TargetGrf => {
                     builder.import_raw_entry_from_grf(&mut grf_archive, relative_path)?;
                 }
-                MergeEntrySource::ThorArchive => {
+                MergeEntrySource::PatchThor => {
                     builder.import_raw_entry_from_thor(thor_archive, relative_path)?;
+                }
+                MergeEntrySource::PatchGrf => {
+                    unreachable!("GRF patch source in Thor patching");
                 }
             }
         }
@@ -158,7 +258,13 @@ pub fn apply_patch_to_disk<R: Read + Seek>(
         .collect();
     file_entries.sort_unstable_by(|a, b| a.offset.cmp(&b.offset));
     for entry in file_entries {
-        let dest_path = join_windows_relative_path(root_directory.as_ref(), &entry.relative_path);
+        let mut dest_path = join_windows_relative_path(root_directory.as_ref(), &entry.relative_path);
+        if let Ok(current_exe) = env::current_exe() {
+            if dest_path == current_exe {
+                dest_path = dest_path.with_extension("exe.new");
+            }
+        }
+
         if entry.is_removed {
             // Try to remove file and ignore errors (file might not exist)
             let _ignore = fs::remove_file(dest_path);

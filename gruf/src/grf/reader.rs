@@ -382,7 +382,7 @@ named!(parse_grf_file_entry_200<&[u8], GrfFileEntry>,
 );
 
 named_args!(parse_grf_file_entries_101(files_count: usize)<&[u8], HashMap<String, GrfFileEntry>>,
-fold_many_m_n!(1, files_count - 1, parse_grf_file_entry_101, HashMap::new(), |mut acc: HashMap<_, _>, item| {
+fold_many_m_n!(1, files_count, parse_grf_file_entry_101, HashMap::new(), |mut acc: HashMap<_, _>, item| {
         acc.insert(item.relative_path.clone(), item);
         acc
     })

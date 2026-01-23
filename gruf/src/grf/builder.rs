@@ -67,6 +67,15 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
         archive: &mut GrfArchive,
         relative_path: String,
     ) -> Result<()> {
+        // Check compatibility for raw copy
+        let compatible = (self.version_major >= 2 && archive.version_major() >= 2) ||
+                         (self.version_major < 2 && archive.version_major() < 2);
+        
+        if !compatible {
+            let content = archive.read_file_content(&relative_path)?;
+            return self.add_file(relative_path, content.as_slice());
+        }
+
         let entry = archive
             .get_file_entry(&relative_path)
             .ok_or(GrufError::EntryNotFound)?
@@ -93,7 +102,9 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
             GenericFileEntry {
                 offset,
                 size: entry.size as u32,
-                size_compressed: entry.size_compressed_aligned as u32,
+                size_compressed: entry.size_compressed as u32,
+                size_compressed_aligned: entry.size_compressed_aligned as u32,
+                entry_type: entry.entry_type,
             },
         );
         Ok(())
@@ -104,6 +115,11 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
         thor_archive: &mut ThorArchive<R>,
         relative_path: String,
     ) -> Result<()> {
+        if self.version_major < 2 {
+            let content = thor_archive.read_file_content(&relative_path)?;
+            return self.add_file(relative_path, content.as_slice());
+        }
+
         let entry = thor_archive
             .get_file_entry(&relative_path)
             .ok_or(GrufError::EntryNotFound)?
@@ -130,6 +146,8 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
                 offset,
                 size: entry.size as u32,
                 size_compressed: entry.size_compressed as u32,
+                size_compressed_aligned: entry.size_compressed as u32,
+                entry_type: 1,
             },
         );
         Ok(())
@@ -141,7 +159,25 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
         let data_size = io::copy(data.by_ref(), &mut encoder)?;
         let data_size_u32 = u32::try_from(data_size)?;
         // Write compressed data
-        let compressed_data = encoder.finish()?;
+        let mut compressed_data = encoder.finish()?;
+        
+        // Handle encryption for version 1.x
+        let mut size_compressed_aligned = compressed_data.len();
+        if self.version_major < 2 {
+             // Pad to 8 bytes
+            let padding = 8 - (compressed_data.len() % 8);
+            if padding != 8 {
+                compressed_data.extend(std::iter::repeat(0).take(padding));
+            }
+            size_compressed_aligned = compressed_data.len();
+            
+            let cycle = match determine_file_encryption(&relative_path, compressed_data.len()) {
+                crate::grf::reader::GrfFileEncryption::Encrypted(c) => c,
+                _ => 0, // Should not happen for 1.x based on determine_file_encryption logic
+            };
+            crate::grf::crypto::encrypt_file_content(&mut compressed_data, cycle);
+        }
+
         let compressed_data_size = compressed_data.len();
         let offset = {
             if let Some(grf_entry) = self.entries.get(&relative_path) {
@@ -165,6 +201,8 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
                 offset,
                 size: data_size_u32,
                 size_compressed: compressed_data_size_u32,
+                size_compressed_aligned: size_compressed_aligned as u32,
+                entry_type: 1, // File
             },
         );
         Ok(())
@@ -189,7 +227,7 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
         let v_file_count = i32::try_from(self.entries.len() + 7)?;
         let file_table_offset = match self.version_major {
             2 => self.write_grf_table_200()?,
-            1 => std::unimplemented!(), // TODO(LinkZ): Implement
+            1 => self.write_grf_table_1xx()?,
             _ => return Err(GrufError::serialization_error("Wrong file format version")),
         };
         // Update the header
@@ -200,6 +238,43 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
             v_file_count,
             &mut self.obj,
         )
+    }
+
+    fn write_grf_table_1xx(&mut self) -> Result<u64> {
+        let mut table = Vec::new();
+        for (relative_path, entry) in &self.entries {
+             let path_win1252 = crate::archive::serialize_to_win1252(relative_path)?;
+             let encrypted_name = crate::grf::crypto::encrypt_file_name(&path_win1252);
+             let path_size_padded = (encrypted_name.len() + 6) as u32;
+             
+             table.write_all(&path_size_padded.to_le_bytes())?;
+             table.write_all(&[0u8; 2])?;
+             table.write_all(&encrypted_name)?;
+             table.write_all(&[0u8; 4])?;
+             
+             let size_tot_enc = (entry.size_compressed as u32)
+                .wrapping_add(entry.size)
+                .wrapping_add(0x02CB);
+             table.write_all(&size_tot_enc.to_le_bytes())?;
+             
+             let size_compressed_aligned_enc = (entry.size_compressed_aligned as u32)
+                .wrapping_add(0x92CB);
+             table.write_all(&size_compressed_aligned_enc.to_le_bytes())?;
+             
+             table.write_all(&entry.size.to_le_bytes())?;
+             table.write_all(&[entry.entry_type])?;
+             
+             let offset_relative = (entry.offset - GRF_HEADER_SIZE as u64) as u32;
+             table.write_all(&offset_relative.to_le_bytes())?;
+        }
+        
+        let table_size = table.len();
+        let table_offset = self.chunks.alloc_chunk(table_size)?;
+        
+        self.obj.seek(SeekFrom::Start(self.start_offset + table_offset))?;
+        self.obj.write_all(&table)?;
+        
+        Ok(table_offset)
     }
 
     fn write_grf_table_200(&mut self) -> Result<u64> {
@@ -249,7 +324,9 @@ impl GrfArchiveBuilder<File> {
                 GenericFileEntry {
                     offset: entry.offset,
                     size: entry.size as u32,
-                    size_compressed: entry.size_compressed_aligned as u32,
+                    size_compressed: entry.size_compressed as u32,
+                    size_compressed_aligned: entry.size_compressed_aligned as u32,
+                    entry_type: entry.entry_type,
                 },
             );
         }
@@ -290,6 +367,34 @@ fn write_grf_header<W: Write>(
     writer.write_all(GRF_HEADER_MAGIC.as_bytes())?;
     bincode::serialize_into(writer, &grf_header)?;
     Ok(())
+}
+
+fn determine_file_encryption(file_name: &str, size_compressed: usize) -> crate::grf::reader::GrfFileEncryption {
+    const SPECIAL_EXTENSIONS: [&str; 4] = [".gnd", ".gat", ".act", ".str"];
+    let file_name_len = file_name.len();
+    if file_name_len < 4 {
+        return crate::grf::reader::GrfFileEncryption::Encrypted(0);
+    }
+    let file_extension = &file_name[file_name_len - 4..];
+    match SPECIAL_EXTENSIONS.iter().position(|&r| r == file_extension) {
+        Some(_) => crate::grf::reader::GrfFileEncryption::Encrypted(0),
+        None => crate::grf::reader::GrfFileEncryption::Encrypted(digit_count(size_compressed)),
+    }
+}
+
+/// Counts digits naively
+fn digit_count(n: usize) -> usize {
+    let mut result = 1;
+    let mut acc = 10;
+    loop {
+        if n < acc {
+            break;
+        }
+        acc *= 10;
+        result += 1;
+    }
+
+    result
 }
 
 #[cfg(test)]

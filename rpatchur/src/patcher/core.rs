@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -8,8 +9,10 @@ use std::time::{Duration, Instant};
 
 use advisory_lock::{AdvisoryFileLock, FileLockMode};
 use anyhow::{anyhow, Context, Result};
+use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::stream::{StreamExt, TryStreamExt};
+use gruf::grf::{GrfArchive, GrfArchiveBuilder};
 use gruf::thor::{self, ThorArchive, ThorPatchInfo, ThorPatchList};
 use gruf::GrufError;
 use tokio::fs::File;
@@ -606,35 +609,77 @@ async fn apply_patches(
 }
 
 fn apply_patch(
-    thor_archive_path: impl AsRef<Path>,
+    patch_file_path: impl AsRef<Path>,
     config: &PatcherConfiguration,
     current_working_dir: impl AsRef<Path>,
 ) -> Result<()> {
-    let mut thor_archive = ThorArchive::open(thor_archive_path.as_ref())?;
-    if thor_archive.use_grf_merging() {
-        // Patch GRF file
-        let target_grf_name = {
-            if thor_archive.target_grf_name().is_empty() {
-                config.client.default_grf_name.clone()
-            } else {
-                thor_archive.target_grf_name()
-            }
-        };
+    let patch_path = patch_file_path.as_ref();
+    let extension = patch_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    if extension == "rgz" || extension == "gpf" {
+        // Handle RGZ/GPF (Gzipped GRF)
+        let file = fs::File::open(patch_path)?;
+        let mut decoder = GzDecoder::new(file);
+
+        // Decompress to a temporary GRF file
+        let temp_dir = tempfile::tempdir()?;
+        let temp_grf_path = temp_dir.path().join("patch_temp.grf");
+        let mut temp_grf_file = fs::File::create(&temp_grf_path)?;
+        std::io::copy(&mut decoder, &mut temp_grf_file)?;
+
+        // Open the decompressed GRF
+        let mut source_grf = GrfArchive::open(&temp_grf_path)?;
+
+        // Target GRF (use default from config)
+        let target_grf_name = &config.client.default_grf_name;
         log::trace!("Target GRF: {:?}", target_grf_name);
+
         let grf_patching_method = match config.patching.in_place {
             true => GrfPatchingMethod::InPlace,
             false => GrfPatchingMethod::OutOfPlace,
         };
-        let target_grf_path = current_working_dir.as_ref().join(&target_grf_name);
-        apply_patch_to_grf(
+        let target_grf_path = current_working_dir.as_ref().join(target_grf_name);
+
+        apply_grf_to_grf(
             grf_patching_method,
             config.patching.create_grf,
             target_grf_path,
-            &mut thor_archive,
-        )
+            &mut source_grf,
+        )?;
+
+        // temp_dir will be deleted when it goes out of scope
+        Ok(())
     } else {
-        // Patch root directory
-        apply_patch_to_disk(current_working_dir, &mut thor_archive)
+        let mut thor_archive = ThorArchive::open(patch_path)?;
+        if thor_archive.use_grf_merging() {
+            // Patch GRF file
+            let target_grf_name = {
+                if thor_archive.target_grf_name().is_empty() {
+                    config.client.default_grf_name.clone()
+                } else {
+                    thor_archive.target_grf_name()
+                }
+            };
+            log::trace!("Target GRF: {:?}", target_grf_name);
+            let grf_patching_method = match config.patching.in_place {
+                true => GrfPatchingMethod::InPlace,
+                false => GrfPatchingMethod::OutOfPlace,
+            };
+            let target_grf_path = current_working_dir.as_ref().join(&target_grf_name);
+            apply_patch_to_grf(
+                grf_patching_method,
+                config.patching.create_grf,
+                target_grf_path,
+                &mut thor_archive,
+            )
+        } else {
+            // Patch root directory
+            apply_patch_to_disk(current_working_dir, &mut thor_archive)
+        }
     }
 }
 

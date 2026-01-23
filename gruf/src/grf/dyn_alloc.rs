@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::convert::TryFrom;
 
 use crate::error::{GrufError, Result};
 use crate::grf::reader::{GrfArchive, GrfFileEntry, GRF_HEADER_SIZE};
@@ -23,31 +22,34 @@ pub fn list_available_chunks(archive: &mut GrfArchive) -> Result<AvailableChunkL
 
     let mut entries: Vec<&GrfFileEntry> = archive.get_entries().collect();
     entries.sort_unstable_by(|a, b| a.offset.cmp(&b.offset));
+    
     let mut chunks_sizes = BTreeSet::new();
     let mut available_chunks = BTreeMap::new();
-    for i in 0..entries.len() - 1 {
-        let left_entry = entries[i];
-        let right_entry = entries[i + 1];
-        let expected_entry_offset = left_entry.offset + left_entry.size_compressed_aligned as u64;
-        let space_between_entries = right_entry
-            .offset
-            .checked_sub(expected_entry_offset)
-            .ok_or_else(|| GrufError::parsing_error("Archive is malformed"))?;
-        let space_between_entries = usize::try_from(space_between_entries)?;
-        chunks_sizes.insert((space_between_entries, expected_entry_offset));
-        available_chunks.insert(
-            expected_entry_offset,
-            AvailableChunk {
-                size: space_between_entries,
-            },
-        );
+    
+    // Start tracking from the end of the header
+    let mut current_offset = GRF_HEADER_SIZE as u64;
+
+    for entry in entries {
+        if entry.offset > current_offset {
+            // Found a hole
+            let hole_size = (entry.offset - current_offset) as usize;
+            if hole_size > 0 {
+                 chunks_sizes.insert((hole_size, current_offset));
+                 available_chunks.insert(
+                    current_offset,
+                    AvailableChunk { size: hole_size },
+                );
+            }
+        }
+        
+        let entry_end = entry.offset + entry.size_compressed_aligned as u64;
+        if entry_end > current_offset {
+            current_offset = entry_end;
+        }
     }
-    let last_entry = entries
-        .last()
-        .ok_or_else(|| GrufError::parsing_error("Cannot get last entry"))?;
-    let end_offset = last_entry.offset + last_entry.size_compressed_aligned as u64;
+
     Ok(AvailableChunkList {
-        end_offset,
+        end_offset: current_offset,
         sizes: chunks_sizes,
         chunks: available_chunks,
     })

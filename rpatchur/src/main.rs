@@ -6,6 +6,7 @@ mod ui;
 
 use log::LevelFilter;
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
@@ -33,6 +34,14 @@ struct Opt {
 }
 
 fn main() -> Result<()> {
+    // Cleanup old executable if it exists
+    if let Ok(current_exe) = env::current_exe() {
+        let old_exe = current_exe.with_extension("exe.old");
+        if old_exe.exists() {
+             let _ = fs::remove_file(old_exe);
+        }
+    }
+
     SimpleLogger::new()
         .with_level(LevelFilter::Off)
         .with_module_level(PKG_NAME, LevelFilter::Info)

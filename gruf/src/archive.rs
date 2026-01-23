@@ -9,6 +9,8 @@ pub struct GenericFileEntry {
     // Note(LinkZ): u32 limited by the GRF and THOR file formats
     pub size: u32,
     pub size_compressed: u32,
+    pub size_compressed_aligned: u32,
+    pub entry_type: u8,
 }
 
 /// Serializes string into a NULL-terminated list of win1252 chars and write it

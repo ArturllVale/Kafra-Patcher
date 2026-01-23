@@ -14,11 +14,27 @@ pub fn decrypt_file_name(file_name: &[u8]) -> Result<Vec<u8>, &str> {
     Ok(mut_vec)
 }
 
+pub fn encrypt_file_name(file_name: &[u8]) -> Vec<u8> {
+    let mut mut_vec = file_name.to_vec();
+    add_zero_padding(&mut mut_vec);
+    grf_encrypt_shuffled(0, 1, mut_vec.as_mut_slice());
+    swap_nibbles(&mut mut_vec);
+    mut_vec
+}
+
 pub fn decrypt_file_content(data: &mut Vec<u8>, cycle: usize) {
     if cycle == 0 {
         grf_decrypt_first_blocks(0, data.as_mut_slice())
     } else {
         grf_decrypt_shuffled(0, cycle, data.as_mut_slice());
+    }
+}
+
+pub fn encrypt_file_content(data: &mut Vec<u8>, cycle: usize) {
+    if cycle == 0 {
+        grf_encrypt_first_blocks(0, data.as_mut_slice())
+    } else {
+        grf_encrypt_shuffled(0, cycle, data.as_mut_slice());
     }
 }
 
@@ -37,6 +53,19 @@ fn remove_zero_padding(vec: &mut Vec<u8>) {
     }
 }
 
+fn add_zero_padding(vec: &mut Vec<u8>) {
+    let padding = DES_BLOCK_SIZE - (vec.len() % DES_BLOCK_SIZE);
+    if padding != DES_BLOCK_SIZE {
+        vec.extend(std::iter::repeat(0).take(padding));
+    }
+    // Ensure we have at least one block? Or maybe just ensure it is multiple of 8.
+    // If it was already multiple of 8, do we add another block of zeros?
+    // remove_zero_padding removes ALL trailing zeros.
+    // If we have "abc\0\0\0\0\0", remove_zero_padding makes it "abc".
+    // If we have "abcde\0\0\0", it makes "abcde".
+    // So we just need to pad to multiple of 8.
+}
+
 fn grf_decrypt_first_blocks(key: u64, buffer: &mut [u8]) {
     let des_cipher = des::Des {
         keys: des::gen_keys(key),
@@ -48,6 +77,20 @@ fn grf_decrypt_first_blocks(key: u64, buffer: &mut [u8]) {
         let block_as_u64 = read_be_u64(&buffer[cur_block_range.clone()]);
         let decrypted_block = des_cipher.decrypt_block_1_round(block_as_u64);
         buffer[cur_block_range].copy_from_slice(&u64::to_be_bytes(decrypted_block));
+    }
+}
+
+fn grf_encrypt_first_blocks(key: u64, buffer: &mut [u8]) {
+    let des_cipher = des::Des {
+        keys: des::gen_keys(key),
+    };
+    let buffer_size_in_blocks = buffer.len() / DES_BLOCK_SIZE;
+    for i in 0..cmp::min(buffer_size_in_blocks, 20) {
+        let cur_block_range = i * DES_BLOCK_SIZE..(i + 1) * DES_BLOCK_SIZE;
+        // Apply 1 round of DES to the block
+        let block_as_u64 = read_be_u64(&buffer[cur_block_range.clone()]);
+        let encrypted_block = des_cipher.encrypt_block_1_round(block_as_u64);
+        buffer[cur_block_range].copy_from_slice(&u64::to_be_bytes(encrypted_block));
     }
 }
 
@@ -78,6 +121,41 @@ fn grf_decrypt_shuffled(key: u64, cycle: usize, buffer: &mut [u8]) {
                 cur_block_view[2] = cur_block_copy[6];
                 cur_block_view[3..6].copy_from_slice(&cur_block_copy[..3]);
                 cur_block_view[6] = cur_block_copy[5];
+                // Mutate the 7th byte
+                cur_block_view[7] = permute_byte(cur_block_copy[7]);
+            }
+            j += 1;
+        }
+    }
+}
+
+fn grf_encrypt_shuffled(key: u64, cycle: usize, buffer: &mut [u8]) {
+    let des_cipher = des::Des {
+        keys: des::gen_keys(key),
+    };
+    let updated_cycle = update_cycle(cycle);
+    let buffer_size_in_blocks = buffer.len() / DES_BLOCK_SIZE;
+    // Process blocks
+    let mut j = 0;
+    for i in 0..buffer_size_in_blocks {
+        let cur_block_range = i * DES_BLOCK_SIZE..(i + 1) * DES_BLOCK_SIZE;
+        if i < 20 || (i % updated_cycle) == 0 {
+            // Apply 1 round of DES to the block
+            let block_as_u64 = read_be_u64(&buffer[cur_block_range.clone()]);
+            let encrypted_block = des_cipher.encrypt_block_1_round(block_as_u64);
+            buffer[cur_block_range].copy_from_slice(&u64::to_be_bytes(encrypted_block));
+        } else {
+            if j == 7 {
+                j = 0;
+                // Unshuffle bytes in the block
+                let cur_block_copy: [u8; DES_BLOCK_SIZE] =
+                    buffer[cur_block_range.clone()].try_into().unwrap();
+                let cur_block_view = &mut buffer[cur_block_range];
+                // 0123456 (final layout) to 3450162 (initial layout)
+                cur_block_view[..3].copy_from_slice(&cur_block_copy[3..6]);
+                cur_block_view[3..5].copy_from_slice(&cur_block_copy[..2]);
+                cur_block_view[5] = cur_block_copy[6];
+                cur_block_view[6] = cur_block_copy[2];
                 // Mutate the 7th byte
                 cur_block_view[7] = permute_byte(cur_block_copy[7]);
             }
