@@ -140,6 +140,7 @@ WEBVIEW_API webview_t webview_new(
   wc.lpfnWndProc = wndproc;
   wc.lpszClassName = classname;
   wc.hIcon = winresIcon;
+  wc.hbrBackground = CreateSolidBrush(RGB(255, 0, 255));
   RegisterClassEx(&wc);
 
   DWORD style = WS_OVERLAPPEDWINDOW;
@@ -160,7 +161,7 @@ WEBVIEW_API webview_t webview_new(
   rect.top = 0;
   rect.right = MulDiv(width, DPI, 96);
   rect.bottom = MulDiv(height, DPI, 96);
-  AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0);
+  AdjustWindowRect(&rect, style, 0);
 
   RECT clientRect;
   GetClientRect(GetDesktopWindow(), &clientRect);
