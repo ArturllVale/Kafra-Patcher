@@ -55,18 +55,33 @@ fn main() -> Result<()> {
             .with_context(|| "Specified working directory is invalid or inaccessible")?;
     };
 
-    let config = match retrieve_patcher_configuration(None) {
+    let mut config = match retrieve_patcher_configuration(None) {
         Err(e) => {
             let err_msg = "Failed to retrieve the patcher's configuration";
+            // Sanitize error message to avoid issues with double quotes in tinyfiledialogs
+            let formatted_error = format!("Error: {}: {:#}.", err_msg, e).replace('"', "'");
             tfd::message_box_ok(
                 "Error",
-                format!("Error: {}: {:#}.", err_msg, e).as_str(),
+                formatted_error.as_str(),
                 tfd::MessageBoxIcon::Error,
             );
             return Err(e);
         }
         Ok(v) => v,
     };
+
+    // Resolve relative path for index_url if it's not a remote URL or absolute file URI
+    if !config.web.index_url.starts_with("http://")
+        && !config.web.index_url.starts_with("https://")
+        && !config.web.index_url.starts_with("file://")
+    {
+        let current_dir = env::current_dir().context("Failed to get current directory")?;
+        let absolute_path = current_dir.join(&config.web.index_url);
+        // Convert to slash-based path for file:/// URI
+        let path_str = absolute_path.to_string_lossy().replace('\\', "/");
+        config.web.index_url = format!("file:///{}", path_str);
+        log::info!("Resolved local index URL: {}", config.web.index_url);
+    }
 
     // Create a channel to allow the webview's thread to communicate with the patching thread
     let (tx, rx) = flume::bounded(32);
