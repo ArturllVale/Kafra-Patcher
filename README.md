@@ -122,6 +122,36 @@ $ rustup target add i686-pc-windows-msvc
 $ cargo build --target=i686-pc-windows-msvc --release
 ```
 
+## Após a Compilação
+
+Após o comando de build terminar com sucesso, você encontrará o executável na pasta `target/release`. 
+
+Para o patcher funcionar, você precisa criar uma pasta separada (onde você quiser) e organizar a estrutura da seguinte forma:
+
+1. Copie o executável (ex: `rpatchur.exe`) da pasta `target/release` para sua nova pasta.
+2. Crie ou copie o arquivo `rpatchur.yml` para a mesma pasta do executável.
+3. Certifique-se de que as configurações no `rpatchur.yml` apontam para os lugares certos (seu site ou arquivos locais).
+
+## Como Editar o Estilo (UI)
+
+O visual do rpatchur é feito inteiramente com **HTML e CSS**, igual a um site.
+
+Para editar o estilo:
+
+1. Crie um arquivo HTML (ex: `index.html`) e seus arquivos CSS/imagens. Você pode usar os exemplos na pasta `examples` deste repositório como base.
+2. Edite o `rpatchur.yml` para apontar para este arquivo.
+   
+   Para testar localmente (sem precisar subir num site):
+   ```yaml
+   web:
+     index_url: file:///C:/Caminho/Para/Seu/index.html
+   ```
+
+3. Abra o `rpatchur.exe`. Ele vai carregar o seu HTML.
+4. Edite o HTML/CSS e reabra o patcher para ver as mudanças.
+
+**Dica:** Você pode criar botões que interagem com o patcher (como "Jogar", "Sair") usando os IDs específicos no HTML. Veja os arquivos na pasta `examples/basic_launcher` para ver como os botões `start-btn` e `exit-btn` funcionam.
+
 ### Compilação Cruzada (Cross Compilation)
 
 Recomenda-se compilar na plataforma de destino. No entanto, há um `Dockerfile` na pasta `docker` para facilitar a compilação do Linux para Windows.
