@@ -163,7 +163,16 @@ impl GrfArchive {
         match file_entry.encryption {
             GrfFileEncryption::Unencrypted => {}
             GrfFileEncryption::Encrypted(cycle) => {
-                decrypt_file_content(&mut content, cycle);
+                let key_buffer: [u8; 8] = self
+                    .container
+                    .header
+                    .key
+                    .get(0..8)
+                    .unwrap_or(&[0; 8])
+                    .try_into()
+                    .unwrap();
+                let key = u64::from_le_bytes(key_buffer);
+                decrypt_file_content(&mut content, key, cycle);
             }
         }
         // Decompress the content with zlib
@@ -234,6 +243,7 @@ pub struct GrfFileEntry {
     pub entry_type: u8,
     pub offset: u64,
     pub encryption: GrfFileEncryption,
+    pub flags: u8,
 }
 
 impl Hash for GrfFileEntry {
@@ -318,6 +328,22 @@ fn determine_file_encryption_101(file_name: &str, size_compressed: usize) -> Grf
     }
 }
 
+fn determine_file_encryption_200(size_compressed: usize, flags: u8) -> GrfFileEncryption {
+    if (flags & 0x02) != 0 {
+        // Mixed encryption
+        let mut cycle = size_compressed / 3;
+        if size_compressed < 3 {
+            cycle = 1;
+        }
+        GrfFileEncryption::Encrypted(cycle)
+    } else if (flags & 0x04) != 0 {
+        // Header encryption
+        GrfFileEncryption::Encrypted(0)
+    } else {
+        GrfFileEncryption::Unencrypted
+    }
+}
+
 /// Counts digits naively
 fn digit_count(n: usize) -> usize {
     let mut result = 1;
@@ -352,6 +378,7 @@ named!(parse_grf_file_entry_101<&[u8], GrfFileEntry>,
                 entry_type,
                 offset: GRF_HEADER_SIZE as u64 + offset as u64,
                 encryption: determine_file_encryption_101(&relative_path, (size_tot_enc - size - 0x02CB) as usize),
+                flags: entry_type,
                 relative_path,
             }
         )
@@ -375,7 +402,8 @@ named!(parse_grf_file_entry_200<&[u8], GrfFileEntry>,
                 size: size as usize,
                 entry_type,
                 offset: GRF_HEADER_SIZE as u64 + offset as u64,
-                encryption: GrfFileEncryption::Unencrypted,
+                encryption: determine_file_encryption_200(size_compressed as usize, entry_type),
+                flags: entry_type,
             }
         )
     )

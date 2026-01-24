@@ -8,8 +8,6 @@ use serde_json::Value;
 use tinyfiledialogs as tfd;
 use web_view::{Content, Handle, WebView};
 #[cfg(windows)]
-use winapi::shared::minwindef::DWORD;
-#[cfg(windows)]
 use winapi::shared::windef::HWND;
 #[cfg(windows)]
 use winapi::um::winuser::{
@@ -17,6 +15,7 @@ use winapi::um::winuser::{
     FindWindowA, GWL_EXSTYLE, HTCAPTION, LWA_COLORKEY, SW_MINIMIZE, WM_NCLBUTTONDOWN,
     WS_EX_LAYERED,
 };
+use winapi::shared::minwindef::DWORD;
 use std::ffi::CString;
 
 /// 'Opaque" struct that can be used to update the UI.
@@ -138,6 +137,7 @@ pub fn build_webview<'a>(
         .build();
 
     #[cfg(windows)]
+    #[cfg(windows)]
     if let Ok(webview) = &webview {
         if let Some(hex_color) = &webview.user_data().patcher_config.window.transparent_color_hex {
             let title = &webview.user_data().patcher_config.window.title;
@@ -146,6 +146,12 @@ pub fn build_webview<'a>(
                     let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
                     if !hwnd.is_null() {
                         apply_transparency(hwnd, hex_color);
+                        // Apply rounded corners region to cut off anti-aliasing artifacts
+                        // Using fixed 10px radius (20px diameter) as per CSS
+                        // 24 is the width/height of the ellipse used for rounded corners (radius 12px)
+                        let width = webview.user_data().patcher_config.window.width;
+                        let height = webview.user_data().patcher_config.window.height;
+                        apply_rounded_corners(hwnd, width as i32, height as i32);
                     }
                 }
             }
@@ -425,3 +431,15 @@ fn apply_transparency(hwnd: HWND, hex_color: &str) {
         SetLayeredWindowAttributes(hwnd, color_key as DWORD, 0, LWA_COLORKEY);
     }
 }
+
+#[cfg(windows)]
+fn apply_rounded_corners(hwnd: HWND, width: i32, height: i32) {
+    unsafe {
+        // Create a rounded rectangular region
+        // width and height are the dimensions of the window
+        // 24 is the width/height of the ellipse used for rounded corners (radius 12px)
+        let region = winapi::um::wingdi::CreateRoundRectRgn(0, 0, width, height, 24, 24);
+        winapi::um::winuser::SetWindowRgn(hwnd, region, 1);
+    }
+}
+

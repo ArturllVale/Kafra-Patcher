@@ -28,10 +28,10 @@
         <nav class="navbar navbar-expand-md navbar-dark bg-dark noselect" onmousedown="external.invoke('start_drag')">
             <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item dropdown">
+                    <li class="nav-item dropdown" onmousedown="event.stopPropagation()">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            More
+                            Mais
                         </a>
                         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <a class="dropdown-item" href="#" onclick="external.invoke('cancel_update')"><i
@@ -50,7 +50,7 @@
                 </ul>
             </div>
             <div class="mx-auto order-0">
-                <a class="navbar-brand mx-auto" href="#">RPatchur</a>
+                <a class="navbar-brand mx-auto" href="#">RPatchur V2</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".dual-collapse2">
                     <span class="navbar-toggler-icon"></span>
                 </button>

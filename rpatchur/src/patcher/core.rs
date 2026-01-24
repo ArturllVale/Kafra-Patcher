@@ -621,18 +621,33 @@ fn apply_patch(
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
 
-    if extension == "rgz" || extension == "gpf" {
-        // Handle RGZ/GPF (Gzipped GRF)
+    if extension == "rgz" || extension == "gpf" || extension == "grf" {
+        // Handle GRF/RGZ/GPF (Gzipped GRF or regular GRF)
         let file = fs::File::open(patch_path)?;
         let mut decoder = GzDecoder::new(file);
 
-        // Decompress to a temporary GRF file
+        // Decompress to a temporary GRF file if needed
         let temp_dir = tempfile::tempdir()?;
         let temp_grf_path = temp_dir.path().join("patch_temp.grf");
-        let mut temp_grf_file = fs::File::create(&temp_grf_path)?;
-        std::io::copy(&mut decoder, &mut temp_grf_file)?;
 
-        // Open the decompressed GRF
+        if extension == "grf" {
+            // Regular GRF, no decompression needed
+            // Copy to temp file to ensure we don't lock source if needed? 
+            // Or just use directly. But apply_grf_to_grf takes a path. 
+            // If we use source path directly, we might need write access if InPlace, but here we are reading FROM it.
+            // apply_grf_to_grf uses `source_grf` which is `&mut GrfArchive`.
+            // Let's just copy it to be safe and consistent with RGZ/GPF flow, 
+            // although for performance avoiding copy would be better.
+            // But wait, `GzDecoder` produces a stream.
+            // Let's just copy the file content to temp_grf_path logic.
+            fs::copy(patch_path, &temp_grf_path)?;
+        } else {
+            // RGZ/GPF, decompress
+            let mut temp_grf_file = fs::File::create(&temp_grf_path)?;
+            std::io::copy(&mut decoder, &mut temp_grf_file)?;
+        }
+
+        // Open the (decompressed or copied) GRF
         let mut source_grf = GrfArchive::open(&temp_grf_path)?;
 
         // Target GRF (use default from config)

@@ -104,6 +104,14 @@ Exemplo de `plist.txt`:
 updates_jan.thor
 ```
 
+#### Formatos Suportados
+O rpatchur foi projetado para trabalhar primariamente com **atualizações de GRF** (método moderno e mais utilizado), mas mantém compatibilidade com formatos antigos.
+
+* **.rgz** e **.gpf** (Principal): Arquivos GRF comprimidos (Gzip). Este é o método recomendado. O rpatchur irá descomprimir e mesclar o conteúdo destes arquivos diretamente no GRF principal do seu servidor.
+* **.thor** (Secundário): Formato legado do Thor Patcher. Suportado para retrocompatibilidade.
+* **.grf**: Para usar arquivos .grf puros, é necessário comprimi-los como `.rgz` ou `.gpf` para que o patcher possa realizar o merge.
+
+
 ## Exemplos
 
 Você pode encontrar arquivos de exemplo para a interface e configuração na pasta `examples`.

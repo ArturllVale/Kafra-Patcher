@@ -22,19 +22,19 @@ pub fn encrypt_file_name(file_name: &[u8]) -> Vec<u8> {
     mut_vec
 }
 
-pub fn decrypt_file_content(data: &mut Vec<u8>, cycle: usize) {
+pub fn decrypt_file_content(data: &mut Vec<u8>, key: u64, cycle: usize) {
     if cycle == 0 {
-        grf_decrypt_first_blocks(0, data.as_mut_slice())
+        grf_decrypt_first_blocks(key, data.as_mut_slice())
     } else {
-        grf_decrypt_shuffled(0, cycle, data.as_mut_slice());
+        grf_decrypt_shuffled(key, cycle, data.as_mut_slice());
     }
 }
 
-pub fn encrypt_file_content(data: &mut Vec<u8>, cycle: usize) {
+pub fn encrypt_file_content(data: &mut Vec<u8>, key: u64, cycle: usize) {
     if cycle == 0 {
-        grf_encrypt_first_blocks(0, data.as_mut_slice())
+        grf_encrypt_first_blocks(key, data.as_mut_slice())
     } else {
-        grf_encrypt_shuffled(0, cycle, data.as_mut_slice());
+        grf_encrypt_shuffled(key, cycle, data.as_mut_slice());
     }
 }
 

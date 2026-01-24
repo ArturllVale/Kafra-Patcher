@@ -67,19 +67,27 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
         archive: &mut GrfArchive,
         relative_path: String,
     ) -> Result<()> {
-        // Check compatibility for raw copy
         let compatible = (self.version_major >= 2 && archive.version_major() >= 2) ||
                          (self.version_major < 2 && archive.version_major() < 2);
         
-        if !compatible {
-            let content = archive.read_file_content(&relative_path)?;
-            return self.add_file(relative_path, content.as_slice());
-        }
-
         let entry = archive
             .get_file_entry(&relative_path)
             .ok_or(GrufError::EntryNotFound)?
             .clone();
+
+        // If compatibility is fine, verify encryption
+        // If entry is encrypted, FORCE incompatibility -> we must decrypt (read_file_content) and re-compress (add_file)
+        // because we don't know the key of the source GRF inside `import_raw_entry_from_grf` easily without extracting it,
+        // and we want target GRF to be unencrypted (or re-encrypted if implemented later, but simpler to store unencrypted).
+        let is_encrypted = match entry.encryption {
+            crate::grf::reader::GrfFileEncryption::Encrypted(_) => true,
+            _ => false,
+        };
+
+        if !compatible || is_encrypted {
+            let content = archive.read_file_content(&relative_path)?;
+            return self.add_file(relative_path, content.as_slice());
+        }
         let content = archive.get_entry_raw_data(&relative_path)?;
         let offset = {
             if let Some(grf_entry) = self.entries.get(&relative_path) {
@@ -175,7 +183,8 @@ impl<W: Write + Seek> GrfArchiveBuilder<W> {
                 crate::grf::reader::GrfFileEncryption::Encrypted(c) => c,
                 _ => 0, // Should not happen for 1.x based on determine_file_encryption logic
             };
-            crate::grf::crypto::encrypt_file_content(&mut compressed_data, cycle);
+            // Use 0 as key for v1.x (or handle properly if key support is needed for 1.x writing)
+            crate::grf::crypto::encrypt_file_content(&mut compressed_data, 0, cycle);
         }
 
         let compressed_data_size = compressed_data.len();

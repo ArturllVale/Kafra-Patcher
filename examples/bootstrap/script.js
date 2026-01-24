@@ -19,7 +19,7 @@ function patchingStatusError(errorMsg) {
         .removeClass("bg-success")
         .removeClass("bg-warning")
         .addClass("bg-danger");
-    $("#download-progress-text").text("Failure: " + errorMsg);
+    $("#download-progress-text").text("Falha: " + errorMsg);
 }
 
 function patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec) {
