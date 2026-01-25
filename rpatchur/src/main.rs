@@ -86,7 +86,7 @@ fn main() -> Result<()> {
     // Create a channel to allow the webview's thread to communicate with the patching thread
     let (tx, rx) = flume::bounded(32);
     let window_title = config.window.title.clone();
-    let webview = ui::build_webview(
+    let mut webview = ui::build_webview(
         window_title.as_str(),
         WebViewUserData::new(config.clone(), tx),
     )
@@ -94,6 +94,19 @@ fn main() -> Result<()> {
 
     // Spawn a patching thread
     let patching_thread = new_patching_thread(rx, UiController::new(&webview), config);
+
+    // Prevent dragging images
+    webview.eval(
+        r#"
+        window.addEventListener('load', function() {
+            var style = document.createElement('style');
+            style.innerHTML = 'img { -webkit-user-drag: none; user-select: none; }';
+            document.head.appendChild(style);
+            document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+        });
+        "#,
+    ).with_context(|| "Failed to inject drag prevention script")?;
+
     webview
         .run()
         .with_context(|| "Failed to run the web view")?;
