@@ -31,6 +31,7 @@ pub struct PlayConfiguration {
     pub path: String,
     pub arguments: Vec<String>,
     pub exit_on_success: Option<bool>,
+    pub launch_on_error: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]

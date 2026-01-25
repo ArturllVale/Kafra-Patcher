@@ -97,6 +97,10 @@ async fn update_game(
                     log::error!("{:#}", err);
                     ui_controller
                         .dispatch_patching_status(PatchingStatus::Error(format!("{:#}", err)));
+                    if config.play.launch_on_error.unwrap_or(false) {
+                        log::info!("Update failed, launching game as requested by configuration.");
+                        ui_controller.launch_game();
+                    }
                 }
                 Ok(()) => {
                     ui_controller.dispatch_patching_status(PatchingStatus::Ready);

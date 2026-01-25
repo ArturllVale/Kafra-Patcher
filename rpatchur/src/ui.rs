@@ -69,6 +69,15 @@ impl UiController {
             log::warn!("Failed to dispatch patching status: {}.", e);
         }
     }
+
+    pub fn launch_game(&self) {
+        if let Err(e) = self.web_view_handle.dispatch(move |webview| {
+            handle_play(webview);
+            Ok(())
+        }) {
+            log::warn!("Failed to dispatch launch game: {}.", e);
+        }
+    }
 }
 
 /// Used to indicate the current status of the patching process.
