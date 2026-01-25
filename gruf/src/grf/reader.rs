@@ -63,7 +63,7 @@ impl GrfArchive {
                 let mut file_chunk = file.by_ref().take(compressed_table.capacity() as u64);
                 file_chunk.read_to_end(&mut compressed_table)?;
                 let mut decoder = ZlibDecoder::new(compressed_table.as_slice());
-                let mut decompressed_table = vec![];
+                let mut decompressed_table = Vec::with_capacity(grf_table_info.table_size);
                 let _decompressed_size =
                     decoder.read_to_end(&mut decompressed_table).map_err(|e| {
                         GrufError::ParsingError(format!("Failed to decompress file table: {}", e))
@@ -410,14 +410,14 @@ named!(parse_grf_file_entry_200<&[u8], GrfFileEntry>,
 );
 
 named_args!(parse_grf_file_entries_101(files_count: usize)<&[u8], HashMap<String, GrfFileEntry>>,
-fold_many_m_n!(1, files_count, parse_grf_file_entry_101, HashMap::new(), |mut acc: HashMap<_, _>, item| {
+fold_many_m_n!(1, files_count, parse_grf_file_entry_101, HashMap::with_capacity(files_count), |mut acc: HashMap<_, _>, item| {
         acc.insert(item.relative_path.clone(), item);
         acc
     })
 );
 
 named_args!(parse_grf_file_entries_200(files_count: usize)<&[u8], HashMap<String, GrfFileEntry>>,
-fold_many_m_n!(1, files_count, parse_grf_file_entry_200, HashMap::new(), |mut acc: HashMap<_, _>, item| {
+fold_many_m_n!(1, files_count, parse_grf_file_entry_200, HashMap::with_capacity(files_count), |mut acc: HashMap<_, _>, item| {
         acc.insert(item.relative_path.clone(), item);
         acc
     })
