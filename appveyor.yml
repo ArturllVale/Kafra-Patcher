@@ -2,7 +2,7 @@
 
 environment:
   global:
-    PROJECT_NAME: rpatchur
+    PROJECT_NAME: kpatcher
   matrix:
     # Stable channel
     - TARGET: i686-pc-windows-msvc
@@ -31,10 +31,10 @@ test_script:
 
 before_deploy:
   # Generate artifacts for release (using --exclude to avoid log's feature clash)
-  - cargo build --release --verbose --workspace --exclude rpatchur
+  - cargo build --release --verbose --workspace --exclude kpatcher
   - cargo build --release --verbose --workspace --exclude mkpatch
   - mkdir staging
-  - copy target\release\rpatchur.exe staging
+  - copy target\release\KPatcher.exe staging
   - copy target\release\mkpatch.exe staging
   - xcopy /E examples staging\
   - copy README.md staging

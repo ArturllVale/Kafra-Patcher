@@ -1,14 +1,14 @@
-Docker may be used to build RPatchur through containers.
+Docker may be used to build Kafra Patcher through containers.
 Through Docker, the build process contains all necessary dependencies.
 
-To build RPatchur with Docker, complete the following procedure:
+To build Kafra Patcher with Docker, complete the following procedure:
 ```shell
-# Build the RPatchur build container
-$ cd /path/to/rpatchur/docker
-$ docker image build -t rpatchur .
+# Build the Kafra Patcher build container
+$ cd /path/to/kpatcher/docker
+$ docker image build -t kpatcher .
 
-# Use the rpatchur image to build rpatchur
-$ docker run -v /path/to/rpatchur:/rpatchur rpatchur
-$ file /path/to/rpatchur/target/x86_64-pc-windows-gnu/release/rpatchur.exe
-/path/to/rpatchur/target/x86_64-pc-windows-gnu/release/rpatchur.exe: PE32+ executable (GUI) x86-64, for MS Windows
+# Use the kpatcher image to build kpatcher
+$ docker run -v /path/to/kpatcher:/kpatcher kpatcher
+$ file /path/to/kpatcher/target/x86_64-pc-windows-gnu/release/KPatcher.exe
+/path/to/kpatcher/target/x86_64-pc-windows-gnu/release/KPatcher.exe: PE32+ executable (GUI) x86-64, for MS Windows
 ```

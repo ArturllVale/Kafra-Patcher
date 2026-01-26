@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0] - 2026-01-26
+### Changed
+- Projeto renomeado de RPatchur para Kafra Patcher
+- Executável agora se chama KPatcher.exe
+- Nova identidade visual e branding
 
 ## [0.3.0] - 2021-05-07
 ### Added

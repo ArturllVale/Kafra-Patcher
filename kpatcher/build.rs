@@ -8,7 +8,7 @@ fn main() {
     let out_path = Path::new(&out_dir).join("libresource.a");
 
     let status = Command::new("windres")
-        .arg("resources/rpatchur.rc")
+        .arg("resources/kpatcher.rc")
         .arg(&out_path)
         .status();
     

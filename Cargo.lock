@@ -1627,6 +1627,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "kpatcher"
+version = "1.0.0"
+dependencies = [
+ "advisory-lock",
+ "anyhow",
+ "flate2",
+ "flume",
+ "futures",
+ "gruf",
+ "httptest",
+ "log",
+ "open",
+ "reqwest",
+ "scopeguard",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "simple_logger",
+ "structopt",
+ "tao",
+ "tempfile",
+ "tinyfiledialogs",
+ "tokio 1.49.0",
+ "twox-hash",
+ "url",
+ "walkdir",
+ "winapi 0.3.9",
+ "wry",
+]
+
+[[package]]
 name = "kuchikiki"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2553,37 +2584,6 @@ dependencies = [
  "wasm-streams",
  "web-sys",
  "winreg",
-]
-
-[[package]]
-name = "rpatchur"
-version = "0.3.0"
-dependencies = [
- "advisory-lock",
- "anyhow",
- "flate2",
- "flume",
- "futures",
- "gruf",
- "httptest",
- "log",
- "open",
- "reqwest",
- "scopeguard",
- "serde",
- "serde_json",
- "serde_yaml",
- "simple_logger",
- "structopt",
- "tao",
- "tempfile",
- "tinyfiledialogs",
- "tokio 1.49.0",
- "twox-hash",
- "url",
- "walkdir",
- "winapi 0.3.9",
- "wry",
 ]
 
 [[package]]
