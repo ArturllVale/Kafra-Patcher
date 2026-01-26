@@ -434,10 +434,10 @@ hotfix_001.thor
 
 | Formato | Descrição | Recomendado |
 |---------|-----------|-------------|
+| `.grf` | Formato Padrão | ⭐ Sim |
 | `.thor` | Formato Thor Patcher (legado) | ⭐ Sim |
 | `.rgz` | GRF comprimido (Gzip) | ⭐ Sim |
 | `.gpf` | GRF Patch File | ⭐ Sim |
-| `.grf` | Precisa ser convertido para `.rgz` | Não |
 
 ---
 
