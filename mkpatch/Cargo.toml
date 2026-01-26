@@ -3,6 +3,7 @@ name = "mkpatch"
 version = "0.1.1"
 authors = ["LinkZ <wanthost@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 description = "Patch generation utility for THOR patchers"
 
 
@@ -18,4 +19,4 @@ anyhow = "1.0"
 structopt = "0.3"
 walkdir = "2.3"
 web-view = "0.7.3"
-tinyfiledialogs = "3.3"
+tinyfiledialogs = { version = "3.3", default-features = false }

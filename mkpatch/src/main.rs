@@ -78,6 +78,15 @@ fn run(cli_args: Opt) -> Result<()> {
     Ok(())
 }
 
+// Shim for missing symbol in MinGW linking of tinyfiledialogs
+// This satisfies the linker if shcore library is not found or processed correctly.
+#[cfg(all(windows, target_env = "gnu"))]
+#[no_mangle]
+pub extern "system" fn SetProcessDpiAwareness(_: i32) -> i32 {
+    // E_NOTIMPL = 0x80004001
+    -2147467263
+}
+
 fn main() {
     const SUCCESS_EXIT_CODE: i32 = 0;
     const FAILURE_EXIT_CODE: i32 = 1;

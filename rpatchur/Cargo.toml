@@ -12,8 +12,6 @@ ProductName = "RPatchur"
 ProductVersion = "0.3.0"
 LegalCopyright = "Copyright © 2020-2021 rpatchur developers"
 
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1"
 
 [dependencies]
 gruf = { version = "0.2", path = "../gruf" }
@@ -39,7 +37,12 @@ advisory-lock = "0.3"
 flate2 = "1.0"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.6", features = ["shellapi", "winuser", "wingdi", "dwmapi"] }
+winapi = { version = "0.3.6", features = [
+    "shellapi",
+    "winuser",
+    "wingdi",
+    "dwmapi",
+] }
 
 [dev-dependencies]
 twox-hash = "1.5"
