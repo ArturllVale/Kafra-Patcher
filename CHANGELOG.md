@@ -5,6 +5,11 @@
 - Projeto renomeado de RPatchur para Kafra Patcher
 - Executável agora se chama KPatcher.exe
 - Nova identidade visual e branding
+- Suporte total a GRF
+- Transparências com Webview2
+- Muito mais performático
+- Novas Funções
+
 
 ## [0.3.0] - 2021-05-07
 ### Added

@@ -1,179 +1,629 @@
 # Kafra Patcher
 
 [![Rust](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml/badge.svg)](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
+[![Windows](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
-> **Kafra Patcher** nasceu do antigo projeto **rpatchur** e agora está na versão **1.0.0**.
+> Patcher customizável e multiplataforma para clientes Ragnarok Online, baseado no antigo projeto **rpatchur**.
 
-`Kafra Patcher` é um atualizador (patcher) customizável e multiplataforma para clientes Ragnarok Online.
+![Screenshot](https://i.imgur.com/mE51Iif.png)
 
-## Funcionalidades
+---
 
-* Interface de usuário (UI) baseada na web e customizável
-* Configurável através de um arquivo YAML externo
-* Suporte a HTTP/HTTPS
-* Aplicação de patches em arquivos GRF (versões 0x101, 0x102, 0x103 e 0x200)
-* Suporte ao formato de patch THOR
-* Substituto direto para o Thor Patcher
-* Suporte a login SSO (pode atuar como um launcher)
-* Aplicação manual de patches
-* Pode utilizar múltiplos espelhos (mirrors) de patch
-* Multiplataforma (Windows, Linux, macOS)
+## 📋 Índice
 
-## Limitações Conhecidas
+- [Funcionalidades](#-funcionalidades)
+- [Requisitos](#-requisitos)
+- [Instalação Rápida](#-instalação-rápida)
+- [Configuração Completa](#-configuração-completa-kpatcheryml)
+- [Criando Botões e UI Customizada](#-criando-botões-e-ui-customizada)
+- [Janela Sem Bordas e Transparência](#-janela-sem-bordas-e-transparência)
+- [Sistema de Atualizações](#-sistema-de-atualizações)
+- [Callback Functions (JavaScript)](#-callback-functions-javascript)
+- [Criando Patches com mkpatch](#-criando-patches-com-mkpatch)
+- [Compilação do Projeto](#-compilação-do-projeto)
+- [Exemplos](#-exemplos)
+- [Licença](#-licença)
 
-* Nenhuma conhecida no momento.
+---
 
-## Screenshot
+## ✨ Funcionalidades
 
-![screen](https://i.imgur.com/mE51Iif.png)
+| Recurso | Descrição |
+|---------|-----------|
+| **UI Web Customizável** | Interface feita com HTML/CSS/JS - como um site |
+| **Configuração YAML** | Arquivo externo simples de configurar |
+| **HTTP/HTTPS** | Suporte a conexões seguras |
+| **Patches GRF** | Versões 0x101, 0x102, 0x103 e 0x200 |
+| **Formato THOR** | Compatível com Thor Patcher |
+| **SSO Login** | Funciona como launcher com autenticação |
+| **Patches Manuais** | Permite aplicar patches locais |
+| **Múltiplos Mirrors** | Redundância de servidores |
+| **Janela Customizada** | Sem bordas, transparente, arredondada |
 
-## Documentação
+---
 
-Você pode encontrar a documentação original do projeto [aqui](https://l1nkz.github.io/rpatchur/).
+## 📦 Requisitos
 
-## Guia para Iniciantes
+- **Windows 10/11** (ou Linux/macOS)
+- **WebView2 Runtime** (incluído no Windows 11, [baixar para Windows 10](https://developer.microsoft.com/microsoft-edge/webview2/))
+- Arquivos do cliente Ragnarok Online
 
-Se você não tem muita experiência com programação ou com a configuração de servidores de Ragnarok, siga este guia básico para começar.
+---
 
-### O que o Kafra Patcher faz?
-Ele verifica um arquivo de lista de atualizações (geralmente chamado `plist.txt`) hospedado no seu site, baixa os arquivos necessários e os aplica ao jogo do usuário.
+## 🚀 Instalação Rápida
 
-### Passo 1: Configuração do Patcher (`kpatcher.yml`)
-O arquivo `kpatcher.yml` é onde você diz ao patcher onde buscar as atualizações e qual executável do jogo abrir. Ele deve ficar na mesma pasta do executável do `KPatcher`.
+1. Baixe a [última release](https://github.com/ArturllVale/rpatchur_v2/releases)
+2. Extraia na pasta do seu cliente RO
+3. Crie o arquivo `kpatcher.yml` (veja configuração abaixo)
+4. Execute `KPatcher.exe`
 
-Exemplo básico de configuração:
+---
+
+## ⚙️ Configuração Completa (kpatcher.yml)
+
+O arquivo `kpatcher.yml` deve estar na **mesma pasta** do executável. Aqui está uma configuração completa:
+
+```yaml
+# ═══════════════════════════════════════════════════════════════
+# CONFIGURAÇÃO DA JANELA
+# ═══════════════════════════════════════════════════════════════
+window:
+  title: Meu Servidor RO      # Título da janela
+  width: 780                   # Largura em pixels
+  height: 580                  # Altura em pixels
+  resizable: false             # Janela redimensionável?
+  
+  # ─── Janela Customizada (Opcional) ───
+  frameless: true              # Remove bordas e barra de título
+  border_radius: 20            # Cantos arredondados (em pixels)
+
+  # ─── Transparência da Janela (Opcional) ───
+  # body {
+  #           background: transparent;
+  #       }
+
+# ═══════════════════════════════════════════════════════════════
+# BOTÃO JOGAR
+# ═══════════════════════════════════════════════════════════════
+play:
+  path: ragexe.exe             # Executável do jogo
+  arguments: ["1sak1"]         # Argumentos (opcional)
+  exit_on_success: true        # Fechar patcher ao iniciar jogo?
+
+# ═══════════════════════════════════════════════════════════════
+# BOTÃO CONFIGURAÇÕES
+# ═══════════════════════════════════════════════════════════════
+setup:
+  path: Setup.exe              # Executável de setup
+  arguments: []                # Argumentos (opcional)
+  exit_on_success: false       # Fechar patcher ao abrir setup?
+
+# ═══════════════════════════════════════════════════════════════
+# CONFIGURAÇÃO WEB E PATCHES
+# ═══════════════════════════════════════════════════════════════
+web:
+  # URL da página HTML (pode ser local ou remota)
+  index_url: https://meuservidor.com/patcher/index.html
+  
+  # Para testes locais, use:
+  # index_url: file:///C:/MeuPatcher/index.html
+  
+  preferred_patch_server: Servidor Principal  # Servidor prioritário
+  
+  patch_servers:
+    - name: Servidor Principal
+      plist_url: https://meuservidor.com/patcher/plist.txt
+      patch_url: https://meuservidor.com/patcher/data/
+    
+    - name: Servidor Backup
+      plist_url: https://backup.meuservidor.com/plist.txt
+      patch_url: https://backup.meuservidor.com/data/
+
+# ═══════════════════════════════════════════════════════════════
+# CONFIGURAÇÃO DO GRF
+# ═══════════════════════════════════════════════════════════════
+client:
+  default_grf_name: meuservidor.grf  # GRF principal para patches
+
+# ═══════════════════════════════════════════════════════════════
+# OPÇÕES DE PATCHING
+# ═══════════════════════════════════════════════════════════════
+patching:
+  in_place: true         # Patchear GRF diretamente
+  check_integrity: true  # Verificar integridade dos downloads
+  create_grf: true       # Criar GRF se não existir
+```
+
+---
+
+## 🎨 Criando Botões e UI Customizada
+
+O Kafra Patcher usa **HTML/CSS/JS** para a interface. Você pode criar qualquer design usando tecnologias web padrão.
+
+### Comandos Disponíveis (external.invoke)
+
+Use `external.invoke('comando')` no seu JavaScript/HTML para interagir com o patcher:
+
+| Comando | Descrição | Exemplo |
+|---------|-----------|---------|
+| `play` | Inicia o jogo | `onclick="external.invoke('play')"` |
+| `setup` | Abre configurações | `onclick="external.invoke('setup')"` |
+| `exit` | Fecha o patcher | `onclick="external.invoke('exit')"` |
+| `minimize` | Minimiza a janela | `onclick="external.invoke('minimize')"` |
+| `start_drag` | Inicia arraste da janela | `onmousedown="external.invoke('start_drag')"` |
+| `start_update` | Inicia atualização | `onclick="external.invoke('start_update')"` |
+| `cancel_update` | Cancela atualização | `onclick="external.invoke('cancel_update')"` |
+| `manual_patch` | Aplica patch manual | `onclick="external.invoke('manual_patch')"` |
+| `reset_cache` | Limpa cache | `onclick="external.invoke('reset_cache')"` |
+
+### Exemplo: Botões Básicos
+
+```html
+<!-- Botão Jogar -->
+<button onclick="external.invoke('play')" id="btn-play" disabled>
+    🎮 Jogar
+</button>
+
+<!-- Botão Sair -->
+<button onclick="external.invoke('exit')" id="btn-exit">
+    ❌ Sair
+</button>
+
+<!-- Botão Minimizar -->
+<button onclick="external.invoke('minimize')" id="btn-minimize">
+    ─
+</button>
+
+<!-- Botão Configurações -->
+<button onclick="external.invoke('setup')" id="btn-setup">
+    ⚙️ Configurações
+</button>
+```
+
+### Exemplo: Menu Dropdown com Ações
+
+```html
+<div class="dropdown">
+    <button class="dropdown-toggle">Opções</button>
+    <div class="dropdown-menu">
+        <a href="#" onclick="external.invoke('cancel_update')">❌ Cancelar Atualização</a>
+        <a href="#" onclick="external.invoke('start_update')">🔄 Reiniciar Atualização</a>
+        <a href="#" onclick="external.invoke('manual_patch')">📁 Patch Manual</a>
+        <a href="#" onclick="external.invoke('reset_cache')">🗑️ Limpar Cache</a>
+    </div>
+</div>
+```
+
+### Exemplo: Abrir URL no Navegador
+
+```html
+<button onclick="openUrl('https://meuservidor.com/register')">
+    📝 Criar Conta
+</button>
+
+<script>
+function openUrl(url) {
+    external.invoke(JSON.stringify({
+        function: 'open_url',
+        parameters: { 'url': url }
+    }));
+}
+</script>
+```
+
+### Exemplo: Login SSO (Launcher)
+
+```html
+<form onsubmit="startGame(); return false;">
+    <input type="text" id="login" placeholder="Usuário" required>
+    <input type="password" id="password" placeholder="Senha" required>
+    <button type="submit">🔐 Conectar</button>
+</form>
+
+<script>
+function startGame() {
+    var login = document.getElementById('login').value;
+    var password = document.getElementById('password').value;
+    
+    external.invoke(JSON.stringify({
+        function: 'login',
+        parameters: {
+            'login': login,
+            'password': password
+        }
+    }));
+}
+</script>
+```
+
+---
+
+## 🪟 Janela Sem Bordas e Transparência
+
+### Removendo Bordas (Frameless)
+
+Adicione `frameless: true` no seu `kpatcher.yml`:
 
 ```yaml
 window:
-  title: Meu Servidor   # Título da janela
-  width: 780
-  height: 580
-  # Funcionalidades extras:
-  frameless: true                 # Oculta bordas e barra de título
-  transparent_color_hex: "FF00FF" # Define cor para transparência (janelas com formatos customizados)
-
-# Comandos JavaScript para UI (janelas sem borda)
-# minimize   -> external.invoke('minimize')
-# start_drag -> external.invoke('start_drag') (chamar no mousedown)
-
-play:
-  path: ragexe.exe      # Nome do executável do seu jogo
-  arguments: ["1sak1"]  # Argumentos (se necessário)
-
-web:
-  # Página HTML que será exibida dentro do patcher (suas notícias, banner, etc)
-  index_url: https://meuservidor.com/patcher/index.html
-  
-  # Configuração de onde baixar os arquivos
-  patch_servers:
-    - name: Servidor Principal
-      # Arquivo de texto contendo a lista de patches (ex: 1.thor, 2.thor)
-      plist_url: https://meuservidor.com/patcher/plist.txt
-      # Pasta onde estão os arquivos .thor ou .grf
-      patch_url: https://meuservidor.com/patcher/data/
-
-client:
-  default_grf_name: meuservidor.grf  # Nome do seu GRF principal
+  frameless: true
 ```
 
-### Passo 2: Criando Patches
-Para atualizar o jogo dos jogadores, você precisa criar arquivos de patch. Este projeto inclui uma ferramenta chamada `mkpatch` para isso.
+> ⚠️ **Importante**: Com `frameless: true`, você precisa criar seus próprios botões de minimizar/fechar e área de arraste!
 
-1. Crie um arquivo `patch.yml` definindo o que vai mudar (veja `examples/patch.yml` para inspiração).
-2. Use o utilitário `mkpatch` (que você precisa compilar ou baixar) para gerar o arquivo `.thor`.
+### Tornando a Janela Arrastável
 
-Exemplo de `patch.yml`:
+Use `start_drag` no `onmousedown` de qualquer elemento que você quer que sirva como barra de título:
+
+```html
+<!-- Barra de título arrastável -->
+<div class="title-bar" onmousedown="external.invoke('start_drag')">
+    <span>Meu Servidor RO</span>
+    <button onclick="external.invoke('minimize')">─</button>
+    <button onclick="external.invoke('exit')">✕</button>
+</div>
+
+<style>
+.title-bar {
+    background: #333;
+    color: white;
+    padding: 10px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+</style>
+```
+
+### Fundo Transparente
+
+Para criar janelas com formatos customizados (não retangulares), use a cor de transparência:
+
 ```yaml
-use_grf_merging: true          # true para colocar arquivos dentro do GRF
-target_grf_name: meuservidor.grf
-
-entries:
-  - relative_path: data\clientinfo.xml # Arquivo local para adicionar
-    in_grf_path: data\clientinfo.xml   # Caminho dentro do GRF
+window:
+  frameless: true
+  transparent_color_hex: "FF00FF"  # Magenta será transparente
 ```
 
-### Passo 3: Hospedando os Arquivos
-No seu servidor web (hospedagem de site), você precisa ter uma estrutura assim:
+Então no seu CSS, use essa cor como fundo:
 
-* `index.html`: A página bonitinha que aparece no patcher.
-* `plist.txt`: Uma lista simples com os números/nomes dos patches.
-* `data/`: Uma pasta com os arquivos `.thor` gerados.
+```css
+body {
+    background-color: #FF00FF;  /* Esta cor será transparente */
+    margin: 0;
+    padding: 0;
+}
 
-Exemplo de `plist.txt`:
+.patcher-content {
+    background: url('meu-background.png') no-repeat;
+    /* OU use um gradiente, cor sólida, etc */
+}
+```
+
+### Cantos Arredondados
+
+```yaml
+window:
+  frameless: true
+  border_radius: 20  # Raio em pixels
+```
+
+### Exemplo Completo: Janela Customizada
+
+```yaml
+window:
+  title: Meu Servidor
+  width: 800
+  height: 600
+  frameless: true
+  border_radius: 15
+  transparent_color_hex: "FF00FF"
+```
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #FF00FF; } /* Transparente */
+
+.window {
+    width: 800px;
+    height: 600px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.titlebar {
+    height: 40px;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    cursor: move;
+}
+
+.titlebar button {
+    border: none;
+    background: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+.titlebar button:hover { background: rgba(255,255,255,0.1); }
+.close-btn:hover { background: #e74c3c !important; }
+</style>
+</head>
+
+<body>
+<div class="window">
+    <div class="titlebar" onmousedown="external.invoke('start_drag')">
+        <span style="color: white;">Meu Servidor RO</span>
+        <div>
+            <button onclick="external.invoke('minimize')">─</button>
+            <button class="close-btn" onclick="external.invoke('exit')">✕</button>
+        </div>
+    </div>
+    
+    <!-- Conteúdo do patcher -->
+    <div class="content">
+        <!-- ... -->
+    </div>
+</div>
+</body>
+</html>
+```
+
+---
+
+## 🔄 Sistema de Atualizações
+
+### Como Funciona
+
+1. O patcher lê `plist_url` para obter a lista de patches
+2. Compara com o cache local para identificar novos patches
+3. Baixa os arquivos `.thor`/`.rgz`/`.gpf` de `patch_url`
+4. Aplica os patches no GRF definido em `default_grf_name`
+
+### Estrutura no Servidor Web
+
+```
+https://meuservidor.com/patcher/
+├── index.html          # UI do patcher
+├── plist.txt           # Lista de patches
+└── data/
+    ├── 1.thor          # Patch 1
+    ├── 2.thor          # Patch 2
+    └── update_jan.thor # Patch de janeiro
+```
+
+### Formato do plist.txt
+
+Simples lista de arquivos, um por linha:
+
 ```
 1.thor
 2.thor
-updates_jan.thor
+3.thor
+update_jan.thor
+hotfix_001.thor
 ```
 
-#### Formatos Suportados
-O Kafra Patcher foi projetado para trabalhar primariamente com **atualizações de GRF** (método moderno e mais utilizado), mas mantém compatibilidade com formatos antigos.
+### Formatos de Patch Suportados
 
-* **.rgz** e **.gpf** (Principal): Arquivos GRF comprimidos (Gzip). Este é o método recomendado. O Kafra Patcher irá descomprimir e mesclar o conteúdo destes arquivos diretamente no GRF principal do seu servidor.
-* **.thor** (Secundário): Formato legado do Thor Patcher. Suportado para retrocompatibilidade.
-* **.grf**: Para usar arquivos .grf puros, é necessário comprimi-los como `.rgz` ou `.gpf` para que o patcher possa realizar o merge.
+| Formato | Descrição | Recomendado |
+|---------|-----------|-------------|
+| `.thor` | Formato Thor Patcher (legado) | ⭐ Sim |
+| `.rgz` | GRF comprimido (Gzip) | ⭐ Sim |
+| `.gpf` | GRF Patch File | ⭐ Sim |
+| `.grf` | Precisa ser convertido para `.rgz` | Não |
 
+---
 
-## Exemplos
+## 📞 Callback Functions (JavaScript)
 
-Você pode encontrar arquivos de exemplo para a interface e configuração na pasta `examples`.
+O patcher chama automaticamente estas funções do seu JavaScript para informar o progresso:
 
-## Compilação (Building)
+### patchingStatusReady()
+Chamada quando o jogo está pronto para jogar.
 
-O diretório `kpatcher` contém o código do patcher (UI, fusão de arquivos, etc).
-O diretório `mkpatch` contém o utilitário de geração de patches THOR.
-O diretório `gruf` contém a biblioteca principal para leitura e escrita de arquivos GRF e THOR.
+```javascript
+function patchingStatusReady() {
+    document.getElementById('btn-play').disabled = false;
+    document.getElementById('progress-text').textContent = 'Pronto!';
+    document.getElementById('progress-bar').style.width = '100%';
+}
+```
 
-Para clonar o repositório e compilar tudo, execute:
+### patchingStatusError(errorMsg)
+Chamada quando ocorre um erro.
+
+```javascript
+function patchingStatusError(errorMsg) {
+    document.getElementById('progress-text').textContent = 'Erro: ' + errorMsg;
+    document.getElementById('progress-bar').classList.add('error');
+}
+```
+
+### patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec)
+Chamada durante o download.
+
+```javascript
+function patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec) {
+    var percent = (100 * nbDownloaded) / nbTotal;
+    var speed = humanFileSize(bytesPerSec) + '/s';
+    
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-text').textContent = 
+        'Baixando: ' + nbDownloaded + '/' + nbTotal + ' - ' + speed;
+}
+
+function humanFileSize(bytes) {
+    var i = bytes == 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
+}
+```
+
+### patchingStatusInstalling(nbInstalled, nbTotal)
+Chamada durante a instalação dos patches.
+
+```javascript
+function patchingStatusInstalling(nbInstalled, nbTotal) {
+    var percent = (100 * nbInstalled) / nbTotal;
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-text').textContent = 
+        'Instalando: ' + nbInstalled + '/' + nbTotal;
+}
+```
+
+### patchingStatusPatchApplied(fileName)
+Chamada quando um patch manual é aplicado.
+
+```javascript
+function patchingStatusPatchApplied(fileName) {
+    alert('Patch aplicado com sucesso: ' + fileName);
+}
+```
+
+### notificationInProgress()
+Chamada quando já existe uma atualização em andamento.
+
+```javascript
+function notificationInProgress() {
+    alert('Já existe uma atualização em andamento!');
+}
+```
+
+---
+
+## 📦 Criando Patches com mkpatch
+
+O utilitário `mkpatch` gera arquivos `.thor` para atualizar o jogo.
+
+### Uso Básico
+
 ```bash
-$ git clone https://github.com/ArturllVale/rpatchur_v2.git
-$ cd rpatchur_v2
-$ cargo build --release
+mkpatch.exe patch.yml output.thor
 ```
 
-Nota: Rust 1.49 ou superior é necessário.
+### Configuração do patch.yml
 
-Para compilar para Windows 32-bit em um sistema 64-bit:
+```yaml
+use_grf_merging: true              # true = coloca arquivos dentro do GRF
+target_grf_name: meuservidor.grf   # GRF de destino
+include_checksums: true            # Incluir checksums (recomendado)
+
+entries:
+  # Adicionar arquivo único
+  - relative_path: data\clientinfo.xml
+    in_grf_path: data\clientinfo.xml
+  
+  # Adicionar pasta inteira
+  - relative_path: data\sprite\monster
+  
+  # Renomear/mover arquivo no GRF
+  - relative_path: local\clientinfo.xml
+    in_grf_path: data\sclientinfo.xml
+  
+  # Remover arquivo do GRF
+  - relative_path: data\arquivo_antigo.txt
+    is_removed: true
+```
+
+### Opções Disponíveis
+
+| Opção | Descrição |
+|-------|-----------|
+| `use_grf_merging` | `true` para modificar GRF, `false` para extrair arquivos |
+| `target_grf_name` | Nome do GRF a ser modificado |
+| `include_checksums` | Inclui verificação de integridade |
+| `relative_path` | Caminho local do arquivo/pasta |
+| `in_grf_path` | Caminho dentro do GRF (se diferente) |
+| `is_removed` | `true` para remover arquivo |
+
+### Fluxo de Trabalho
+
+1. Faça suas alterações nos arquivos do jogo
+2. Crie/edite o `patch.yml` com as alterações
+3. Execute `mkpatch.exe patch.yml meuPatch.thor`
+4. Upload do `.thor` para `patch_url` no servidor
+5. Adicione o nome do arquivo no `plist.txt`
+
+---
+
+## 🔨 Compilação do Projeto
+
+### Requisitos
+
+- [Rust 1.49+](https://rustup.rs/)
+- Git
+
+### Estrutura do Projeto
+
+```
+rpatchur_v2/
+├── kpatcher/     # Código do patcher (UI, patching)
+├── mkpatch/      # Gerador de patches THOR
+├── gruf/         # Biblioteca GRF/THOR
+└── examples/     # Exemplos de UI e configuração
+```
+
+### Compilação
+
 ```bash
-$ rustup target add i686-pc-windows-msvc
-$ cargo build --target=i686-pc-windows-msvc --release
+# Clonar repositório
+git clone https://github.com/ArturllVale/rpatchur_v2.git
+cd rpatchur_v2
+
+# Compilar release
+cargo build --release
+
+# Executáveis estarão em: target/release/
 ```
 
-## Após a Compilação
+### Compilação para Windows 32-bit
 
-Após o comando de build terminar com sucesso, você encontrará o executável na pasta `target/release`. 
+```bash
+rustup target add i686-pc-windows-msvc
+cargo build --target=i686-pc-windows-msvc --release
+```
 
-Para o patcher funcionar, você precisa criar uma pasta separada (onde você quiser) e organizar a estrutura da seguinte forma:
+### Compilação Cruzada (Linux → Windows)
 
-1. Copie o executável (ex: `KPatcher.exe`) da pasta `target/release` para sua nova pasta.
-2. Crie ou copie o arquivo `kpatcher.yml` para a mesma pasta do executável.
-3. Certifique-se de que as configurações no `kpatcher.yml` apontam para os lugares certos (seu site ou arquivos locais).
+Use o Dockerfile na pasta `docker/` para compilar de Linux para Windows.
 
-## Como Editar o Estilo (UI)
+---
 
-O visual do Kafra Patcher é feito inteiramente com **HTML e CSS**, igual a um site.
+## 📂 Exemplos
 
-Para editar o estilo:
+A pasta `examples/` contém exemplos prontos para uso:
 
-1. Crie um arquivo HTML (ex: `index.html`) e seus arquivos CSS/imagens. Você pode usar os exemplos na pasta `examples` deste repositório como base.
-2. Edite o `kpatcher.yml` para apontar para este arquivo.
-   
-   Para testar localmente (sem precisar subir num site):
-   ```yaml
-   web:
-     index_url: file:///C:/Caminho/Para/Seu/index.html
-   ```
+| Exemplo | Descrição |
+|---------|-----------|
+| `bootstrap/` | UI completa com Bootstrap, barra de progresso e notificações |
+| `basic_launcher/` | Launcher simples com login SSO |
+| `kpatcher.yml` | Configuração de exemplo completa |
+| `patch.yml` | Configuração de patch de exemplo |
 
-3. Abra o `KPatcher.exe`. Ele vai carregar o seu HTML.
-4. Edite o HTML/CSS e reabra o patcher para ver as mudanças.
+Para usar um exemplo:
 
-**Dica:** Você pode criar botões que interagem com o patcher (como "Jogar", "Sair") usando os IDs específicos no HTML. Veja os arquivos na pasta `examples/basic_launcher` para ver como os botões `start-btn` e `exit-btn` funcionam.
+1. Copie os arquivos para junto do `KPatcher.exe`
+2. Edite `kpatcher.yml` com suas URLs
+3. Execute o patcher
 
-### Compilação Cruzada (Cross Compilation)
+---
 
-Recomenda-se compilar na plataforma de destino. No entanto, há um `Dockerfile` na pasta `docker` para facilitar a compilação do Linux para Windows.
+## 📜 Licença
 
-## Licença
+Copyright (c) 2020-2026 Kafra Patcher developers
+Desenvolvido por: **L1nkZ** / Antigo **rpatchur**
+Mantenedor: **Lumen#0110** / Atual **Kafra Patcher**
 
-Copyright (c) 2020-2026 Kafra Patcher developers e mantenedor: Lumen#0110
-
+Distribuído sob licença [MIT](LICENSE-MIT) / [Apache-2.0](LICENSE-APACHE).
