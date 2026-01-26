@@ -9,8 +9,18 @@ window:
   transparent_color_hex: "FF00FF" # Define cor para transparência (janelas com formatos customizados)
 
 # Comandos JavaScript para UI (janelas sem borda)
-# minimize   -> external.invoke('minimize')
-# start_drag -> external.invoke('start_drag') (chamar no mousedown)
+# Para criar novos botões, use o onclick="external.invoke('comando')" no seu HTML.
+# Lista de comandos disponíveis:
+# - minimize       -> Minimiza a janela.
+# - start_drag     -> Inicia o arraste da janela (usar no onmousedown).
+# - exit           -> Fecha o patcher.
+# - setup          -> Abre o executável de configuração (definido abaixo).
+# - play           -> Abre o executável do jogo (definido abaixo).
+# - start_update   -> Inicia o processo de atualização.
+# - cancel_update  -> Cancela a atualização.
+# - manual_patch   -> Abre diálogo para selecionar patch manual.
+# - reset_cache    -> Limpa o cache de atualizações.
+# - open_url       -> Abre URL no navegador padrão (ex: { "function": "open_url", "parameters": { "url": "https://..." } })
 
 # Configure the Play button’s behavior
 play:

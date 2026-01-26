@@ -162,7 +162,13 @@ pub fn build_webview<'a>(
                         // 24 is the width/height of the ellipse used for rounded corners (radius 12px)
                         let width = webview.user_data().patcher_config.window.width;
                         let height = webview.user_data().patcher_config.window.height;
-                        apply_rounded_corners(hwnd, width as i32, height as i32);
+                        let radius = webview
+                            .user_data()
+                            .patcher_config
+                            .window
+                            .border_radius
+                            .unwrap_or(12);
+                        apply_rounded_corners(hwnd, width as i32, height as i32, radius);
                     }
                 }
             }
@@ -444,12 +450,13 @@ fn apply_transparency(hwnd: HWND, hex_color: &str) {
 }
 
 #[cfg(windows)]
-fn apply_rounded_corners(hwnd: HWND, width: i32, height: i32) {
+fn apply_rounded_corners(hwnd: HWND, width: i32, height: i32, radius: i32) {
     unsafe {
         // Create a rounded rectangular region
         // width and height are the dimensions of the window
-        // 24 is the width/height of the ellipse used for rounded corners (radius 12px)
-        let region = winapi::um::wingdi::CreateRoundRectRgn(0, 0, width, height, 24, 24);
+        // radius * 2 is the width/height of the ellipse used for rounded corners
+        let diameter = radius * 2;
+        let region = winapi::um::wingdi::CreateRoundRectRgn(0, 0, width, height, diameter, diameter);
         winapi::um::winuser::SetWindowRgn(hwnd, region, 1);
     }
 }

@@ -25,7 +25,8 @@
 
     <div class="main-wrapper">
         <!-- Top Navbar -->
-        <nav class="navbar navbar-expand-md navbar-dark bg-dark noselect" onmousedown="external.invoke('start_drag')">
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark noselect"
+            onmousedown="if($(event.target).closest('.btn, .dropdown-toggle, a').length === 0) external.invoke('start_drag')">
             <div class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item dropdown" onmousedown="event.stopPropagation()">
@@ -63,6 +64,8 @@
                                 onclick="external.invoke('play')" disabled>Jogar</button>
                             <button type="button" class="btn btn-primary" id="button-setup"
                                 onclick="external.invoke('setup')">Configurações</button>
+                            <button type="button" class="btn btn-secondary" id="button-minimize"
+                                onclick="external.invoke('minimize')">_</button>
                             <button type="button" class="btn btn-danger" id="button-exit"
                                 onclick="external.invoke('exit')">Sair</button>
                         </div>

@@ -25,6 +25,7 @@ pub struct WindowConfiguration {
     pub frameless: Option<bool>,
     #[cfg(windows)]
     pub transparent_color_hex: Option<String>,
+    pub border_radius: Option<i32>,
 }
 
 #[derive(Deserialize, Clone)]
