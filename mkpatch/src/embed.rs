@@ -67,7 +67,7 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
+    use std::io::{Cursor, Read};
     use flate2::read::GzDecoder;
 
     #[test]
