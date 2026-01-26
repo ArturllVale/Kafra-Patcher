@@ -1,6 +1,6 @@
 # Kafra Patcher
 
-[![Rust](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml/badge.svg)](https://github.com/ArturllVale/rpatchur_v2/actions/workflows/rust.yml)
+[![Rust](https://github.com/ArturllVale/Kafra-Patcher/actions/workflows/rust.yml/badge.svg)](https://github.com/ArturllVale/Kafra-Patcher/actions/workflows/rust.yml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 [![Windows](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
@@ -52,7 +52,7 @@
 
 ## 🚀 Instalação Rápida
 
-1. Baixe a [última release](https://github.com/ArturllVale/rpatchur_v2/releases)
+1. Baixe a [última release](https://github.com/ArturllVale/Kafra-Patcher/releases)
 2. Extraia na pasta do seu cliente RO
 3. Crie o arquivo `kpatcher.yml` (veja configuração abaixo)
 4. Execute `KPatcher.exe`
@@ -527,7 +527,7 @@ function notificationInProgress() {
 ### Estrutura do Projeto
 
 ```
-rpatchur_v2/
+Kafra-Patcher/
 ├── kpatcher/     # Código do patcher (UI, patching)
 ├── mkpatch/      # Gerador de patches THOR
 ├── gruf/         # Biblioteca GRF/THOR
@@ -538,8 +538,8 @@ rpatchur_v2/
 
 ```bash
 # Clonar repositório
-git clone https://github.com/ArturllVale/rpatchur_v2.git
-cd rpatchur_v2
+git clone https://github.com/ArturllVale/Kafra-Patcher.git
+cd Kafra-Patcher
 
 # Compilar release
 cargo build --release
@@ -554,11 +554,7 @@ rustup target add i686-pc-windows-msvc
 cargo build --target=i686-pc-windows-msvc --release
 ```
 
-### Compilação Cruzada (Linux → Windows)
 
-Use o Dockerfile na pasta `docker/` para compilar de Linux para Windows.
-
----
 
 ## 📂 Exemplos
 
@@ -575,14 +571,15 @@ Para usar um exemplo:
 
 1. Copie os arquivos para junto do `KPatcher.exe`
 2. Edite `kpatcher.yml` com suas URLs
-3. Execute o patcher
+3. Injete o `kpatcher.yml` no `KPatcher.exe` com o `mkpatch.exe`
+4. Execute o patcher
 
 ---
 
 ## 📜 Licença
 
 Copyright (c) 2020-2026 Kafra Patcher developers
-Desenvolvido por: **L1nkZ** / Antigo **rpatchur**
-Mantenedor: **Lumen#0110** / Atual **Kafra Patcher**
+- Desenvolvido por: **L1nkZ** / Antigo **rpatchur**
+- Mantenedor: **Lumen#0110** / Atual **Kafra Patcher**
 
 Distribuído sob licença [MIT](LICENSE-MIT) / [Apache-2.0](LICENSE-APACHE).
