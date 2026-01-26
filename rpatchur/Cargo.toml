@@ -17,7 +17,8 @@ LegalCopyright = "Copyright © 2020-2021 rpatchur developers"
 gruf = { version = "0.2", path = "../gruf" }
 
 open = "1.7.0"
-web-view = "0.7.3"
+wry = "0.24"
+tao = "0.16"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 futures = "0.3"

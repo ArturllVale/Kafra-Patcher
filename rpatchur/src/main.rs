@@ -9,16 +9,17 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use simple_logger::SimpleLogger;
 use structopt::StructOpt;
 use tinyfiledialogs as tfd;
-use tokio::runtime;
+use tao::event::{Event, WindowEvent};
+use tao::event_loop::{ControlFlow, EventLoop};
+use ui::{UiController, UiEvent};
 
 use patcher::{
     patcher_thread_routine, retrieve_patcher_configuration, PatcherCommand, PatcherConfiguration,
 };
-use ui::{UiController, WebViewUserData};
 
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -83,20 +84,30 @@ fn main() -> Result<()> {
         log::info!("Resolved local index URL: {}", config.web.index_url);
     }
 
-    // Create a channel to allow the webview's thread to communicate with the patching thread
+    // Event Loop
+    let event_loop = EventLoop::<UiEvent>::with_user_event();
+    let proxy = event_loop.create_proxy();
+    
+    // Create a channel to allow the patcher thread to communicate with the patching thread (which we spawn)
+    // Wait, the patching thread receives PatcherCommand from UI.
+    // The UI Controller sends UiEvent to Main Thread.
     let (tx, rx) = flume::bounded(32);
-    let window_title = config.window.title.clone();
-    let mut webview = ui::build_webview(
-        window_title.as_str(),
-        WebViewUserData::new(config.clone(), tx),
-    )
-    .with_context(|| "Failed to build a web view")?;
+    
+    let (webview, patching_in_progress) = ui::build_webview(
+        &event_loop, 
+        config.clone(), 
+        tx, 
+        proxy.clone()
+    ).with_context(|| "Failed to build a web view")?;
 
     // Spawn a patching thread
-    let patching_thread = new_patching_thread(rx, UiController::new(&webview), config);
+    let ui_ctrl = UiController::new(proxy);
+    // new_patching_thread returns a JoinHandle, but we can't join it easily in tao loop.
+    // We just spawn it and let it run.
+    let _patching_thread = new_patching_thread(rx, ui_ctrl, config.clone());
 
     // Prevent dragging images
-    webview.eval(
+    webview.evaluate_script(
         r#"
         window.addEventListener('load', function() {
             var style = document.createElement('style');
@@ -107,16 +118,45 @@ fn main() -> Result<()> {
         "#,
     ).with_context(|| "Failed to inject drag prevention script")?;
 
-    webview
-        .run()
-        .with_context(|| "Failed to run the web view")?;
-    // Join the patching thread
-    patching_thread
-        .join()
-        .map_err(|_| anyhow!("Failed to join patching thread"))?
-        .with_context(|| "Patching thread ran into an error")?;
+    event_loop.run(move |event, _, control_flow| {
+        *control_flow = ControlFlow::Wait;
 
-    Ok(())
+        match event {
+            Event::UserEvent(ui_event) => match ui_event {
+                UiEvent::PatchingStatus(status) => {
+                     let script = match status {
+                        ui::PatchingStatus::Ready => "patchingStatusReady()".to_string(),
+                        ui::PatchingStatus::Error(msg) => format!("patchingStatusError(\"{}\")", msg),
+                        ui::PatchingStatus::DownloadInProgress(nb, total, rate) => format!("patchingStatusDownloading({}, {}, {})", nb, total, rate),
+                        ui::PatchingStatus::InstallationInProgress(nb, total) => format!("patchingStatusInstalling({}, {})", nb, total),
+                        ui::PatchingStatus::ManualPatchApplied(name) => format!("patchingStatusPatchApplied(\"{}\")", name),
+                     };
+                     if let Err(e) = webview.evaluate_script(&script) {
+                         log::warn!("Failed to dispatch patching status: {}.", e);
+                     }
+                },
+                UiEvent::SetPatchInProgress(val) => {
+                    patching_in_progress.store(val, std::sync::atomic::Ordering::Relaxed);
+                },
+                UiEvent::LaunchGame => {
+                     let args = config.play.arguments.clone();
+                     ui::start_game_client(&config, &args);
+                },
+                UiEvent::Exit => {
+                    *control_flow = ControlFlow::Exit;
+                },
+                UiEvent::RunScript(script) => {
+                     if let Err(e) = webview.evaluate_script(&script) {
+                         log::warn!("Failed to run script: {}.", e);
+                     }
+                }
+            },
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                *control_flow = ControlFlow::Exit;
+            },
+            _ => ()
+        }
+    });
 }
 
 /// Spawns a new thread that runs a single threaded tokio runtime to execute the patcher routine
@@ -127,7 +167,7 @@ fn new_patching_thread(
 ) -> std::thread::JoinHandle<Result<()>> {
     std::thread::spawn(move || {
         // Build a tokio runtime that runs a scheduler on the current thread and a reactor
-        let tokio_rt = runtime::Builder::new_current_thread()
+        let tokio_rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .with_context(|| "Failed to build a tokio runtime")?;

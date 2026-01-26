@@ -57,7 +57,7 @@ pub async fn patcher_thread_routine(
                 return;
             }
             Ok(cmd) => match cmd {
-                PatcherCommand::Quit => break,
+
                 PatcherCommand::StartUpdate => {
                     update_game(&ui_controller, config, rx).await;
                 }

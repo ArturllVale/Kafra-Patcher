@@ -1,16 +1,18 @@
 # Configure the patcher's window
 window:
-  title: RPatchur V2   # Title of the main window
-  width: 800        # Width of the main window (in pixels)
+  title: RPatchur   # Title of the main window
+  width: 780        # Width of the main window (in pixels)
   height: 580       # Height of the main window (in pixels)
   resizable: false  # Make the main window resizable
   # Funcionalidades extras:
   frameless: true                 # Oculta bordas e barra de título
-  transparent_color_hex: "FF00FF" # Define cor para transparência (janelas com formatos customizados)
+  border_radius: 20               # Raio da borda da janela (em pixels)
 
 # Comandos JavaScript para UI (janelas sem borda)
 # Para criar novos botões, use o onclick="external.invoke('comando')" no seu HTML.
-# Lista de comandos disponíveis:
+# Exemplo de botão de minimizar:
+#<button type="button" class="btn btn-secondary" id="button-minimize" onclick="external.invoke('minimize')">_</button>
+# Lista de comandos external.invoke() disponíveis:
 # - minimize       -> Minimiza a janela.
 # - start_drag     -> Inicia o arraste da janela (usar no onmousedown).
 # - exit           -> Fecha o patcher.

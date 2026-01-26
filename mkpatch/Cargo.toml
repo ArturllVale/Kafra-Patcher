@@ -18,5 +18,6 @@ serde_json = "1.0"
 anyhow = "1.0"
 structopt = "0.3"
 walkdir = "2.3"
-web-view = "0.7.3"
+wry = "0.24"
+tao = "0.16"
 tinyfiledialogs = { version = "3.3", default-features = false }

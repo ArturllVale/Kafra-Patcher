@@ -23,8 +23,6 @@ pub struct WindowConfiguration {
     pub height: i32,
     pub resizable: bool,
     pub frameless: Option<bool>,
-    #[cfg(windows)]
-    pub transparent_color_hex: Option<String>,
     pub border_radius: Option<i32>,
 }
 

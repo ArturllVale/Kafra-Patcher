@@ -1,463 +1,243 @@
-use std::fs;
-use std::path::PathBuf;
-
 use crate::patcher::{get_patcher_name, PatcherCommand, PatcherConfiguration};
 use crate::process::start_executable;
+use anyhow::{Context, Result};
 use serde::Deserialize;
-use serde_json::Value;
-use tinyfiledialogs as tfd;
-use web_view::{Content, Handle, WebView};
-#[cfg(windows)]
-use winapi::shared::windef::HWND;
-#[cfg(windows)]
-use winapi::um::winuser::{
-    GetWindowLongA, ReleaseCapture, SendMessageA, SetLayeredWindowAttributes, SetWindowLongA,
-    FindWindowA, GWL_EXSTYLE, HTCAPTION, LWA_COLORKEY, SW_MINIMIZE, WM_NCLBUTTONDOWN,
-    WS_EX_LAYERED,
-};
-#[cfg(windows)]
-use winapi::shared::minwindef::DWORD;
-#[cfg(windows)]
-use std::ffi::CString;
 
-/// 'Opaque" struct that can be used to update the UI.
-pub struct UiController {
-    web_view_handle: Handle<WebViewUserData>,
+use serde_json::Value;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tao::{
+    dpi::LogicalSize,
+    event_loop::{EventLoop, EventLoopProxy},
+    window::{Window, WindowBuilder},
+};
+use tinyfiledialogs as tfd;
+use wry::webview::{WebView, WebViewBuilder};
+
+#[cfg(windows)]
+use tao::platform::windows::WindowExtWindows;
+#[cfg(windows)]
+use winapi::um::wingdi::CreateRoundRectRgn;
+#[cfg(windows)]
+use winapi::um::winuser::SetWindowRgn;
+
+#[derive(Debug, Clone)]
+pub enum UiEvent {
+    PatchingStatus(PatchingStatus),
+    SetPatchInProgress(bool),
+    LaunchGame,
+    Exit,
+    RunScript(String),
 }
+
+#[derive(Clone)]
+pub struct UiController {
+    proxy: EventLoopProxy<UiEvent>,
+}
+
 impl UiController {
-    pub fn new(web_view: &WebView<'_, WebViewUserData>) -> UiController {
-        UiController {
-            web_view_handle: web_view.handle(),
-        }
+    pub fn new(proxy: EventLoopProxy<UiEvent>) -> UiController {
+        UiController { proxy }
     }
 
-    /// Allows another thread to indicate the current status of the patching process.
-    ///
-    /// This updates the UI with useful information.
     pub fn dispatch_patching_status(&self, status: PatchingStatus) {
-        if let Err(e) = self.web_view_handle.dispatch(move |webview| {
-            let result = match status {
-                PatchingStatus::Ready => webview.eval("patchingStatusReady()"),
-                PatchingStatus::Error(msg) => {
-                    webview.eval(&format!("patchingStatusError(\"{}\")", msg))
-                }
-                PatchingStatus::DownloadInProgress(nb_downloaded, nb_total, bytes_per_sec) => {
-                    webview.eval(&format!(
-                        "patchingStatusDownloading({}, {}, {})",
-                        nb_downloaded, nb_total, bytes_per_sec
-                    ))
-                }
-                PatchingStatus::InstallationInProgress(nb_installed, nb_total) => webview.eval(
-                    &format!("patchingStatusInstalling({}, {})", nb_installed, nb_total),
-                ),
-                PatchingStatus::ManualPatchApplied(name) => {
-                    webview.eval(&format!("patchingStatusPatchApplied(\"{}\")", name))
-                }
-            };
-            if let Err(e) = result {
-                log::warn!("Failed to dispatch patching status: {}.", e);
-            }
-            Ok(())
-        }) {
-            log::warn!("Failed to dispatch patching status: {}.", e);
-        }
+        let _ = self.proxy.send_event(UiEvent::PatchingStatus(status));
     }
 
     pub fn set_patch_in_progress(&self, value: bool) {
-        if let Err(e) = self.web_view_handle.dispatch(move |webview| {
-            webview.user_data_mut().patching_in_progress = value;
-            Ok(())
-        }) {
-            log::warn!("Failed to dispatch patching status: {}.", e);
-        }
+        let _ = self.proxy.send_event(UiEvent::SetPatchInProgress(value));
     }
 
     pub fn launch_game(&self) {
-        if let Err(e) = self.web_view_handle.dispatch(move |webview| {
-            handle_play(webview);
-            Ok(())
-        }) {
-            log::warn!("Failed to dispatch launch game: {}.", e);
-        }
+        let _ = self.proxy.send_event(UiEvent::LaunchGame);
     }
 }
 
-/// Used to indicate the current status of the patching process.
+#[derive(Debug, Clone)]
 pub enum PatchingStatus {
     Ready,
-    Error(String),                         // Error message
-    DownloadInProgress(usize, usize, u64), // Downloaded files, Total number, Bytes per second
-    InstallationInProgress(usize, usize),  // Installed patches, Total number
-    ManualPatchApplied(String),            // Patch file name
+    Error(String),
+    DownloadInProgress(usize, usize, u64),
+    InstallationInProgress(usize, usize),
+    ManualPatchApplied(String),
 }
 
-pub struct WebViewUserData {
-    patcher_config: PatcherConfiguration,
+/// Builds the Window and WebView, setting up IPC handling.
+/// Returns the Window, WebView, and a shared flag for patching status.
+pub fn build_webview(
+    event_loop: &EventLoop<UiEvent>,
+    config: PatcherConfiguration,
     patching_thread_tx: flume::Sender<PatcherCommand>,
-    patching_in_progress: bool,
-}
-impl WebViewUserData {
-    pub fn new(
-        patcher_config: PatcherConfiguration,
-        patching_thread_tx: flume::Sender<PatcherCommand>,
-    ) -> WebViewUserData {
-        WebViewUserData {
-            patcher_config,
-            patching_thread_tx,
-            patching_in_progress: false,
-        }
-    }
-}
-impl Drop for WebViewUserData {
-    fn drop(&mut self) {
-        // Ask the patching thread to stop whenever WebViewUserData is dropped
-        let _res = self.patching_thread_tx.try_send(PatcherCommand::Quit);
-    }
-}
+    proxy: EventLoopProxy<UiEvent>,
+) -> Result<(WebView, Arc<AtomicBool>)> {
+    let window = WindowBuilder::new()
+        .with_title(&config.window.title)
+        .with_inner_size(LogicalSize::new(
+            config.window.width as f64,
+            config.window.height as f64,
+        ))
+        .with_resizable(config.window.resizable)
+        .with_decorations(!config.window.frameless.unwrap_or(false))
+        .with_transparent(true)
+        .build(event_loop)
+        .context("Failed to create window")?;
 
-/// Creates a `WebView` object with the appropriate settings for our needs.
-pub fn build_webview<'a>(
-    title: &'a str,
-    user_data: WebViewUserData,
-) -> web_view::WVResult<WebView<'a, WebViewUserData>> {
-    let webview = web_view::builder() // Assign to variable
-        .title(title)
-        .content(Content::Url(user_data.patcher_config.web.index_url.clone()))
-        .size(
-            user_data.patcher_config.window.width,
-            user_data.patcher_config.window.height,
-        )
-        .resizable(user_data.patcher_config.window.resizable)
-        .frameless(user_data.patcher_config.window.frameless.unwrap_or(false))
-        .user_data(user_data)
-        .invoke_handler(|webview, arg| {
-            match arg {
-                "play" => handle_play(webview),
-                "setup" => handle_setup(webview),
-                "exit" => handle_exit(webview),
-                "start_update" => handle_start_update(webview),
-                "cancel_update" => handle_cancel_update(webview),
-                "reset_cache" => handle_reset_cache(webview),
-                "manual_patch" => handle_manual_patch(webview),
-                "minimize" => handle_minimize(webview),
-                "start_drag" => handle_start_drag(webview),
-                request => handle_json_request(webview, request),
-            }
-            Ok(())
-        })
-        .build();
+    // Apply border radius if configured (Windows only)
+    #[cfg(windows)]
+    if let Some(radius) = config.window.border_radius {
+        apply_border_radius(&window, config.window.width, config.window.height, radius);
+    }
 
-    #[cfg(windows)]
-    #[cfg(windows)]
-    if let Ok(webview) = &webview {
-        if let Some(hex_color) = &webview.user_data().patcher_config.window.transparent_color_hex {
-            let title = &webview.user_data().patcher_config.window.title;
-            if let Ok(c_title) = CString::new(title.as_str()) {
-                unsafe {
-                    let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
-                    if !hwnd.is_null() {
-                        apply_transparency(hwnd, hex_color);
-                        // Apply rounded corners region to cut off anti-aliasing artifacts
-                        // Using fixed 10px radius (20px diameter) as per CSS
-                        // 24 is the width/height of the ellipse used for rounded corners (radius 12px)
-                        let width = webview.user_data().patcher_config.window.width;
-                        let height = webview.user_data().patcher_config.window.height;
-                        let radius = webview
-                            .user_data()
-                            .patcher_config
-                            .window
-                            .border_radius
-                            .unwrap_or(12);
-                        apply_rounded_corners(hwnd, width as i32, height as i32, radius);
-                    }
+    // Shared state for IPC handler
+    let patching_in_progress = Arc::new(AtomicBool::new(false));
+    let pip_clone = patching_in_progress.clone();
+    
+    // Capture config and tx for IPC
+    let ipc_config = config.clone();
+    let ipc_tx = patching_thread_tx.clone();
+    let ipc_proxy = proxy.clone();
+
+    // The IPC handler for Wry
+    let ipc_handler = move |window: &Window, request: String| {
+        match request.as_str() {
+            "play" => {
+                let args = ipc_config.play.arguments.clone();
+                start_game_client(&ipc_config, &args);
+                if ipc_config.play.exit_on_success.unwrap_or(true) {
+                     let _ = ipc_proxy.send_event(UiEvent::Exit);
                 }
             }
-        }
-    }
-
-    webview
-}
-
-/// Opens the configured game client with the configured arguments.
-///
-/// This function can create elevated processes on Windows with UAC activated.
-fn handle_play(webview: &mut WebView<WebViewUserData>) {
-    let client_arguments = webview.user_data().patcher_config.play.arguments.clone();
-    start_game_client(webview, &client_arguments);
-}
-
-/// Opens the configured 'Setup' software with the configured arguments.
-///
-/// This function can create elevated processes on Windows with UAC activated.
-fn handle_setup(webview: &mut WebView<WebViewUserData>) {
-    let setup_exe: &String = &webview.user_data().patcher_config.setup.path;
-    let setup_arguments = &webview.user_data().patcher_config.setup.arguments;
-    let exit_on_success = webview
-        .user_data()
-        .patcher_config
-        .setup
-        .exit_on_success
-        .unwrap_or(false);
-    match start_executable(setup_exe, setup_arguments) {
-        Ok(success) => {
-            if success {
-                log::trace!("Setup software started");
-                if exit_on_success {
-                    webview.exit();
+            "setup" => {
+                handle_setup(&ipc_config);
+                if ipc_config.setup.exit_on_success.unwrap_or(false) {
+                     let _ = ipc_proxy.send_event(UiEvent::Exit);
                 }
             }
+            "exit" => {
+                let _ = ipc_proxy.send_event(UiEvent::Exit);
+            }
+            "start_update" => {
+                if pip_clone.load(Ordering::Relaxed) {
+                    let _ = ipc_proxy.send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
+                } else {
+                    let _ = ipc_tx.send(PatcherCommand::StartUpdate);
+                }
+            }
+            "cancel_update" => {
+                let _ = ipc_tx.send(PatcherCommand::CancelUpdate);
+            }
+            "reset_cache" => {
+                handle_reset_cache();
+            }
+            "manual_patch" => {
+                if pip_clone.load(Ordering::Relaxed) {
+                     let _ = ipc_proxy.send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
+                } else {
+                    // We need to open a dialog. tfd::open_file_dialog blocks. 
+                    // Is it safe on this thread? If this is the UI thread, it blocks UI.
+                    // But `web-view` did it in invoke handler.
+                    handle_manual_patch(&ipc_tx);
+                }
+            }
+            "minimize" => {
+                window.set_minimized(true);
+            }
+            "start_drag" => {
+                let _ = window.drag_window();
+            }
+            req => {
+                handle_json_request(req, &ipc_config, window, &ipc_proxy);
+            }
         }
-        Err(e) => {
-            log::warn!("Failed to start setup software: {}", e);
-        }
-    }
+    };
+
+    let webview = WebViewBuilder::new(window)?
+        .with_url(&config.web.index_url)?
+        .with_transparent(true)
+        // Inject polyfill for web-view's `external.invoke`
+        .with_initialization_script("window.external = { invoke: function(s) { window.ipc.postMessage(s); } };")
+        .with_ipc_handler(ipc_handler)
+        .build()?;
+
+    Ok((webview, patching_in_progress))
 }
 
-/// Exits the patcher cleanly.
-fn handle_exit(webview: &mut WebView<WebViewUserData>) {
-    webview.exit();
+pub fn start_game_client(config: &PatcherConfiguration, args: &[String]) {
+    let client_exe = &config.play.path;
+    let _ = start_executable(client_exe, args).map_err(|e| log::warn!("Failed to start client: {}", e));
 }
 
-/// Starts the patching task/thread.
-fn handle_start_update(webview: &mut WebView<WebViewUserData>) {
-    // Patching is already in progress, abort.
-    if webview.user_data().patching_in_progress {
-        let res = webview.eval("notificationInProgress()");
-        if let Err(e) = res {
-            log::warn!("Failed to dispatch notification: {}.", e);
-        }
-        return;
-    }
-
-    let send_res = webview
-        .user_data_mut()
-        .patching_thread_tx
-        .send(PatcherCommand::StartUpdate);
-    if send_res.is_ok() {
-        log::trace!("Sent StartUpdate command to patching thread");
-    }
+fn handle_setup(config: &PatcherConfiguration) {
+    let setup_exe = &config.setup.path;
+    let setup_args = &config.setup.arguments;
+    let _ = start_executable(setup_exe, setup_args).map_err(|e| log::warn!("Failed to start setup: {}", e));
 }
 
-/// Cancels the patching task/thread.
-fn handle_cancel_update(webview: &mut WebView<WebViewUserData>) {
-    if webview
-        .user_data_mut()
-        .patching_thread_tx
-        .send(PatcherCommand::CancelUpdate)
-        .is_ok()
-    {
-        log::trace!("Sent CancelUpdate command to patching thread");
-    }
-}
-
-/// Resets the patcher cache (which is used to keep track of already applied
-/// patches).
-fn handle_reset_cache(_webview: &mut WebView<WebViewUserData>) {
+fn handle_reset_cache() {
     if let Ok(patcher_name) = get_patcher_name() {
         let cache_file_path = PathBuf::from(patcher_name).with_extension("dat");
-        if let Err(e) = fs::remove_file(cache_file_path) {
-            log::warn!("Failed to remove the cache file: {}", e);
-        }
+        let _ = fs::remove_file(cache_file_path);
     }
 }
 
-/// Asks the user to provide a patch file to apply
-fn handle_manual_patch(webview: &mut WebView<WebViewUserData>) {
-    // Patching is already in progress, abort.
-    if webview.user_data().patching_in_progress {
-        let res = webview.eval("notificationInProgress()");
-        if let Err(e) = res {
-            log::warn!("Failed to dispatch notification: {}.", e);
-        }
-        return;
-    }
-
+fn handle_manual_patch(tx: &flume::Sender<PatcherCommand>) {
     let opt_path = tfd::open_file_dialog(
         "Select a file",
         "",
         Some((&["*.thor"], "Patch Files (*.thor)")),
     );
     if let Some(path) = opt_path {
-        log::info!("Requesting manual patch '{}'", path);
-        if webview
-            .user_data_mut()
-            .patching_thread_tx
-            .send(PatcherCommand::ApplyPatch(PathBuf::from(path)))
-            .is_ok()
-        {
-            log::trace!("Sent ApplyPatch command to patching thread");
-        }
+        let _ = tx.send(PatcherCommand::ApplyPatch(PathBuf::from(path)));
     }
 }
 
-/// Parses JSON requests (for invoking functions with parameters) and dispatches
-/// them to the invoked function.
-fn handle_json_request(webview: &mut WebView<WebViewUserData>, request: &str) {
-    let result: serde_json::Result<Value> = serde_json::from_str(request);
-    match result {
-        Err(e) => {
-            log::error!("Invalid JSON request: {}", e);
-        }
-        Ok(json_req) => {
-            let function_name = json_req["function"].as_str();
-            if let Some(function_name) = function_name {
-                let function_params = json_req["parameters"].clone();
-                match function_name {
-                    "login" => handle_login(webview, function_params),
-                    "open_url" => handle_open_url(function_params),
-                    _ => {
-                        log::error!("Unknown function '{}'", function_name);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Parameters expected for the login function
 #[derive(Deserialize)]
 struct LoginParameters {
     login: String,
     password: String,
 }
 
-/// Launches the game client with the given credentials
-fn handle_login(webview: &mut WebView<WebViewUserData>, parameters: Value) {
-    let result: serde_json::Result<LoginParameters> = serde_json::from_value(parameters);
-    match result {
-        Err(e) => log::error!("Invalid arguments given for 'login': {}", e),
-        Ok(login_params) => {
-            // Push credentials to the list of arguments first
-            let mut play_arguments: Vec<String> = vec![
-                format!("-t:{}", login_params.password),
-                login_params.login,
-                "server".to_string(),
-            ];
-            play_arguments.extend(
-                webview
-                    .user_data()
-                    .patcher_config
-                    .play
-                    .arguments
-                    .iter()
-                    .cloned(),
-            );
-            start_game_client(webview, &play_arguments);
-        }
-    }
-}
-
-/// Parameters expected for the open_url function
 #[derive(Deserialize)]
 struct OpenUrlParameters {
     url: String,
 }
 
-/// Opens an URL with the native URL Handler
-fn handle_open_url(parameters: Value) {
-    let result: serde_json::Result<OpenUrlParameters> = serde_json::from_value(parameters);
-    match result {
-        Err(e) => log::error!("Invalid arguments given for 'open_url': {}", e),
-        Ok(params) => match open::that(params.url) {
-            Ok(exit_status) => {
-                if !exit_status.success() {
-                    if let Some(code) = exit_status.code() {
-                        log::error!("Command returned non-zero exit status {}!", code);
+fn handle_json_request(request: &str, config: &PatcherConfiguration, _window: &Window, _proxy: &EventLoopProxy<UiEvent>) {
+    if let Ok(json_req) = serde_json::from_str::<Value>(request) {
+        if let Some(function_name) = json_req["function"].as_str() {
+            match function_name {
+                "login" => {
+                    if let Ok(params) = serde_json::from_value::<LoginParameters>(json_req["parameters"].clone()) {
+                        let mut args = vec![
+                            format!("-t:{}", params.password),
+                            params.login,
+                            "server".to_string(),
+                        ];
+                        args.extend(config.play.arguments.iter().cloned());
+                        start_game_client(config, &args);
                     }
                 }
-            }
-            Err(why) => {
-                log::error!("Error open_url function: '{}'", why);
-            }
-        },
-    }
-}
-
-fn start_game_client(webview: &mut WebView<WebViewUserData>, client_arguments: &[String]) {
-    let client_exe: &String = &webview.user_data().patcher_config.play.path;
-    let exit_on_success = webview
-        .user_data()
-        .patcher_config
-        .play
-        .exit_on_success
-        .unwrap_or(true);
-    match start_executable(client_exe, client_arguments) {
-        Ok(success) => {
-            if success {
-                log::trace!("Client started");
-                if exit_on_success {
-                    webview.exit();
+                "open_url" => {
+                    if let Ok(params) = serde_json::from_value::<OpenUrlParameters>(json_req["parameters"].clone()) {
+                        let _ = open::that(params.url);
+                    }
                 }
-            }
-        }
-        Err(e) => {
-            log::warn!("Failed to start client: {}", e);
-        }
-    }
-}
-
-#[cfg(windows)]
-fn handle_minimize(webview: &mut WebView<WebViewUserData>) {
-    let title = &webview.user_data().patcher_config.window.title;
-    if let Ok(c_title) = CString::new(title.as_str()) {
-        unsafe {
-            let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
-            if !hwnd.is_null() {
-                winapi::um::winuser::ShowWindow(hwnd, SW_MINIMIZE);
+                _ => log::error!("Unknown function '{}'", function_name),
             }
         }
     }
 }
 
-#[cfg(not(windows))]
-fn handle_minimize(_webview: &mut WebView<WebViewUserData>) {
-    log::warn!("Minimize is not supported on this platform.");
-}
-
 #[cfg(windows)]
-fn handle_start_drag(webview: &mut WebView<WebViewUserData>) {
-    let title = &webview.user_data().patcher_config.window.title;
-    if let Ok(c_title) = CString::new(title.as_str()) {
-        unsafe {
-            let hwnd = FindWindowA(std::ptr::null(), c_title.as_ptr());
-            if !hwnd.is_null() {
-                ReleaseCapture();
-                SendMessageA(hwnd, WM_NCLBUTTONDOWN, HTCAPTION as usize, 0);
-            }
-        }
-    }
-}
-
-#[cfg(not(windows))]
-fn handle_start_drag(_webview: &mut WebView<WebViewUserData>) {
-    log::warn!("Start drag is not supported on this platform.");
-}
-
-#[cfg(windows)]
-fn apply_transparency(hwnd: HWND, hex_color: &str) {
-    let color = u32::from_str_radix(hex_color, 16).unwrap_or(0xFF00FF);
-    // Convert RGB hex to BGR for Windows
-    let r = (color >> 16) & 0xFF;
-    let g = (color >> 8) & 0xFF;
-    let b = color & 0xFF;
-    let color_key = (b << 16) | (g << 8) | r;
-
+fn apply_border_radius(window: &Window, width: i32, height: i32, radius: i32) {
+    let hwnd = window.hwnd() as winapi::shared::windef::HWND;
     unsafe {
-        let ex_style = GetWindowLongA(hwnd, GWL_EXSTYLE);
-        SetWindowLongA(hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED as i32);
-        SetLayeredWindowAttributes(hwnd, color_key as DWORD, 0, LWA_COLORKEY);
+        let region = CreateRoundRectRgn(0, 0, width, height, radius, radius);
+        if !region.is_null() {
+            SetWindowRgn(hwnd, region, 1); // 1 = TRUE (redraw)
+            // Note: SetWindowRgn takes ownership of the region, so we don't delete it
+        }
     }
 }
-
-#[cfg(windows)]
-fn apply_rounded_corners(hwnd: HWND, width: i32, height: i32, radius: i32) {
-    unsafe {
-        // Create a rounded rectangular region
-        // width and height are the dimensions of the window
-        // radius * 2 is the width/height of the ellipse used for rounded corners
-        let diameter = radius * 2;
-        let region = winapi::um::wingdi::CreateRoundRectRgn(0, 0, width, height, diameter, diameter);
-        winapi::um::winuser::SetWindowRgn(hwnd, region, 1);
-    }
-}
-

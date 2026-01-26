@@ -1,35 +1,79 @@
 use std::path::{Path, PathBuf};
 use tinyfiledialogs as tfd;
-use web_view::*;
+use wry::webview::{WebView, WebViewBuilder};
+use tao::{
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+    dpi::LogicalSize,
+};
 use serde::Deserialize;
 
 use crate::generator::generate_patch_from_definition;
 use crate::patch_definition::{PatchDefinition, PatchEntry};
 
-pub fn run_ui() {
-    let html_content = include_str!("assets/index.html");
-
-    web_view::builder()
-        .title("MKPatch UI")
-        .content(Content::Html(html_content))
-        .size(600, 650)
-        .resizable(true)
-        .debug(true)
-        .user_data(())
-        .invoke_handler(|webview, arg| {
-            if arg == "select_files" {
-                handle_select_files(webview);
-            } else if arg.starts_with("generate:") {
-                let json_str = &arg[9..];
-                handle_generate(webview, json_str);
-            }
-            Ok(())
-        })
-        .run()
-        .unwrap();
+enum UiEvent {
+    SelectFiles,
+    Generate(String),
 }
 
-fn handle_select_files(webview: &mut WebView<()>) {
+pub fn run_ui() {
+    let event_loop = EventLoop::<UiEvent>::with_user_event();
+    let proxy = event_loop.create_proxy();
+    
+    let window = WindowBuilder::new()
+        .with_title("MKPatch UI")
+        .with_inner_size(LogicalSize::new(600.0, 650.0))
+        .with_resizable(true)
+        .build(&event_loop)
+        .unwrap();
+
+    let html_content = include_str!("assets/index.html");
+
+    let handler_proxy = proxy.clone();
+    let handler = move |_: &tao::window::Window, req: String| {
+        if req == "select_files" {
+            let _ = handler_proxy.send_event(UiEvent::SelectFiles);
+        } else if req.starts_with("generate:") {
+            let json_str = req[9..].to_string();
+            let _ = handler_proxy.send_event(UiEvent::Generate(json_str));
+        }
+    };
+
+    let webview = WebViewBuilder::new(window)
+        .unwrap() // WebViewBuilder::new returns Result
+        .with_html(html_content)
+        .unwrap() // assuming simple html content
+        .with_initialization_script("window.external = { invoke: function(s) { window.ipc.postMessage(s); } };")
+        .with_ipc_handler(handler)
+        // .with_devtools(true) // debug was enabled in old code
+        .build()
+        .unwrap();
+    
+    // Open devtools if debug was true? default is usually disabled in release, enabled in debug.
+    // wry 0.24 enables devtools by default for debug builds I think.
+
+    event_loop.run(move |event, _, control_flow| {
+        *control_flow = ControlFlow::Wait;
+
+        match event {
+            Event::UserEvent(ui_event) => match ui_event {
+                UiEvent::SelectFiles => {
+                    handle_select_files(&webview);
+                },
+                UiEvent::Generate(json_str) => {
+                    handle_generate(&webview, &json_str);
+                }
+            },
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                *control_flow = ControlFlow::Exit;
+            },
+            _ => ()
+        }
+    });
+}
+
+fn handle_select_files(webview: &WebView) {
     let files = tfd::open_file_dialog_multi(
         "Select Files to Patch",
         "",
@@ -40,7 +84,7 @@ fn handle_select_files(webview: &mut WebView<()>) {
         // format as json array string
         let files_json = serde_json::to_string(&files).unwrap_or("[]".to_string());
         let js = format!("filesSelected({})", files_json);
-        webview.eval(&js).ok();
+        let _ = webview.evaluate_script(&js);
     }
 }
 
@@ -52,48 +96,20 @@ struct UIInput {
     files: Vec<String>,
 }
 
-fn handle_generate(webview: &mut WebView<()>, json_str: &str) {
+fn handle_generate(webview: &WebView, json_str: &str) {
     let input: UIInput = match serde_json::from_str(json_str) {
         Ok(i) => i,
         Err(e) => {
-            webview.eval(&format!("logMessage('Error parsing input: {}')", e)).ok();
+            let _ = webview.evaluate_script(&format!("logMessage('Error parsing input: {}')", e));
             return;
         }
     };
 
     if input.files.is_empty() {
-        webview.eval("logMessage('No files selected!')").ok();
+        let _ = webview.evaluate_script("logMessage('No files selected!')");
         return;
     }
 
-
-    
-    // We need to write the helper logic to actually read files from their absolute paths
-    // The current `generate_patch_from_definition` expects `native_path` to be `patch_data_directory + relative_path`.
-    // But here we have absolute paths.
-    // We can trick `generate_patch_from_definition` by setting `patch_data_directory` to root and `relative_path` to absolute?
-    // Windows absolute paths have drive letters.
-    // Let's modify logic or handle it.
-    
-    // Easier: Copy `generate_patch_from_definition` logic but adapted for absolute paths?
-    // Or, actually, `mkpatch` logic `native_path = patch_data_directory.join(relative_path)`.
-    // If I set `patch_data_directory` to empty/cwd, and `relative_path` to absolute path, verify if `join` works.
-    // Path::new("").join("C:/foo") -> "C:/foo". Yes.
-    
-    // BUT we need `relative_path` in `PatchEntry` to be the path INSIDE the GRF (win32 style).
-    // And `mkpatch` uses `relative_path` for BOTH sourcing the file AND destination.
-    // Code:
-    // let native_path = patch_data_directory.join(posix_path(entry.relative_path));
-    // archive_builder.append_file_update(target_win32_relative_path, file)?;
-    
-    // `target_win32_relative_path` comes from `entry.in_grf_path` OR `entry.relative_path`.
-    // So:
-    // 1. `entry.relative_path` -> Must be the path on disk (can be absolute).
-    // 2. `entry.in_grf_path` -> Must be the path in GRF.
-    
-    // So I should populate `relative_path` with the Absolute Path from the picker.
-    // And `in_grf_path` with just the filename (or user edited path).
-    
     let entries_mapped: Vec<PatchEntry> = input.files.iter().map(|f| {
         let path = Path::new(f);
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
@@ -119,16 +135,17 @@ fn handle_generate(webview: &mut WebView<()>, json_str: &str) {
         output_path
     };
 
-    webview.eval("logMessage('Generating patch...')").ok();
+    let _ = webview.evaluate_script("logMessage('Generating patch...')");
     
     // We pass "." as base dir because our relative_paths are absolute
     match generate_patch_from_definition(def_for_gen, ".", &output_path) {
         Ok(_) => {
-            webview.eval(&format!("logMessage('Success! Patch saved to: {}')", output_path.display().to_string().replace("\\", "\\\\"))).ok();
-            webview.eval("alert('Patch Generated Successfully!')").ok();
+            let output_display = output_path.display().to_string().replace("\\", "\\\\");
+            let _ = webview.evaluate_script(&format!("logMessage('Success! Patch saved to: {}')", output_display));
+            let _ = webview.evaluate_script("alert('Patch Generated Successfully!')");
         },
         Err(e) => {
-            webview.eval(&format!("logMessage('Error: {}')", e)).ok();
+            let _ = webview.evaluate_script(&format!("logMessage('Error: {}')", e));
         }
     }
 }
