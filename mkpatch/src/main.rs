@@ -1,6 +1,7 @@
 mod patch_definition;
 mod generator;
 mod ui;
+pub mod embed;
 
 use std::path::PathBuf;
 use std::{env, process};

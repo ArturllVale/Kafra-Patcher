@@ -24,3 +24,24 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build --release --verbose
+    - name: Prepare Artifacts
+      shell: pwsh
+      run: |
+        mkdir dist
+        cp target/release/kpatcher.exe dist/KPatcher.exe
+        cp target/release/mkpatch.exe dist/mkpatch.exe
+        cp examples/kpatcher.yml dist/
+        cp examples/patch.yml dist/
+        cp -r examples/bootstrap dist/
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rpatchur-windows
+        path: dist/

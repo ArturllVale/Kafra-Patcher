@@ -60,6 +60,22 @@
 
 ---
 
+## 🔒 Protegendo sua Configuração (Embed Config)
+
+Por segurança, você pode **embutir** o arquivo `kpatcher.yml` dentro do executável `KPatcher.exe`. Isso oculta as URLs do seu servidor e evita que usuários editem a configuração.
+
+O utilitário `mkpatch.exe` possui uma interface gráfica para isso:
+
+1. Abra o `mkpatch.exe` (sem argumentos)
+2. Vá na aba **Embed Config**
+3. Selecione o seu `KPatcher.exe` original
+4. Selecione o seu `kpatcher.yml` configurado
+5. Clique em **Embutir Config no EXE**
+
+Um novo arquivo será gerado (ex: `KPatcher_embedded.exe`). Você pode distribuir este arquivo **sem** o `kpatcher.yml` junto.
+
+---
+
 ## ⚙️ Configuração Completa (kpatcher.yml)
 
 O arquivo `kpatcher.yml` deve estar na **mesma pasta** do executável. Aqui está uma configuração completa:
@@ -284,14 +300,14 @@ Para criar janelas com formatos customizados (não retangulares), use a cor de t
 ```yaml
 window:
   frameless: true
-  transparent_color_hex: "FF00FF"  # Magenta será transparente
 ```
 
 Então no seu CSS, use essa cor como fundo:
 
 ```css
+```css
 body {
-    background-color: #FF00FF;  /* Esta cor será transparente */
+    background: transparent;
     margin: 0;
     padding: 0;
 }
@@ -319,7 +335,6 @@ window:
   height: 600
   frameless: true
   border_radius: 15
-  transparent_color_hex: "FF00FF"
 ```
 
 ```html
@@ -328,7 +343,7 @@ window:
 <head>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #FF00FF; } /* Transparente */
+body { background: transparent; }
 
 .window {
     width: 800px;

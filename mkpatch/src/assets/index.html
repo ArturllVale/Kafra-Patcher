@@ -8,23 +8,62 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
-            background: #f0f0f0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             user-select: none;
+            min-height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
         }
 
         .container {
             max-width: 550px;
             margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         h1 {
             text-align: center;
             margin-top: 0;
+            color: #1a1a2e;
+            font-size: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
             color: #333;
+        }
+
+        .tab.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .form-group {
@@ -42,25 +81,33 @@
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 6px;
             box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
 
         button {
             width: 100%;
             padding: 12px;
-            background: #007bff;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         button:hover {
-            background: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         }
 
         button:active {
@@ -68,12 +115,38 @@
         }
 
         .secondary-btn {
-            background: #6c757d;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
             margin-bottom: 10px;
         }
 
         .secondary-btn:hover {
-            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
+        .embed-btn {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+
+        .embed-btn:hover {
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .file-display {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            word-break: break-all;
+            min-height: 40px;
+            color: #333;
+        }
+
+        .file-display.empty {
+            color: #aaa;
+            text-align: center;
         }
 
         #file-list {
@@ -82,7 +155,7 @@
             overflow-y: auto;
             padding: 8px;
             background: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 6px;
             margin-bottom: 5px;
             font-family: monospace;
             font-size: 13px;
@@ -109,7 +182,7 @@
             overflow-y: auto;
             background: #fafafa;
             padding: 10px;
-            border-radius: 4px;
+            border-radius: 6px;
         }
 
         .checkbox-group {
@@ -127,46 +200,134 @@
             margin-bottom: 0;
             font-weight: normal;
         }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #004085;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>MKPatch Maker</h1>
+        <h1>🔧 MKPatch Tools</h1>
 
-        <div class="form-group">
-            <label>Output Filename (.thor)</label>
-            <input type="text" id="outputName" value="patch.thor" placeholder="e.g. 2023-10-10_update.thor">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('embed')">Embed Config</div>
+            <div class="tab" onclick="switchTab('patch')">Create Patch</div>
         </div>
 
-        <div class="form-group">
-            <label>Target GRF (Optional)</label>
-            <input type="text" id="targetGrf" placeholder="e.g. data.grf (Leave empty for data folder)">
-        </div>
-
-        <div class="form-group checkbox-group">
-            <input type="checkbox" id="mergeGrf">
-            <label for="mergeGrf">Merge into GRF (Use when updating files inside a GRF)</label>
-        </div>
-
-        <div class="form-group">
-            <label>Files to Include</label>
-            <button class="secondary-btn" onclick="external.invoke('select_files')">Browse Files...</button>
-            <div id="file-list">
-                <div style="color:#aaa; text-align:center; padding-top:60px;">No files selected</div>
+        <!-- Tab: Embed Config -->
+        <div id="tab-embed" class="tab-content active">
+            <div class="info-box">
+                Embute o arquivo de configuração YML dentro do executável do patcher para ocultar URLs sensíveis.
             </div>
+
+            <div class="form-group">
+                <label>Executável do Patcher (.exe)</label>
+                <button class="secondary-btn" onclick="external.invoke('select_exe')">Selecionar EXE...</button>
+                <div id="exe-display" class="file-display empty">Nenhum arquivo selecionado</div>
+            </div>
+
+            <div class="form-group">
+                <label>Arquivo de Configuração (.yml)</label>
+                <button class="secondary-btn" onclick="external.invoke('select_yml')">Selecionar YML...</button>
+                <div id="yml-display" class="file-display empty">Nenhum arquivo selecionado</div>
+            </div>
+
+            <button class="embed-btn" onclick="embedConfig()">🔒 Embutir Config no EXE</button>
         </div>
 
-        <button onclick="generate()">Generate Patch</button>
+        <!-- Tab: Create Patch -->
+        <div id="tab-patch" class="tab-content">
+            <div class="form-group">
+                <label>Output Filename (.thor)</label>
+                <input type="text" id="outputName" value="patch.thor" placeholder="e.g. 2023-10-10_update.thor">
+            </div>
 
-        <div class="logs" id="logs">Waiting for inputs...</div>
+            <div class="form-group">
+                <label>Target GRF (Optional)</label>
+                <input type="text" id="targetGrf" placeholder="e.g. data.grf (Leave empty for data folder)">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="mergeGrf">
+                <label for="mergeGrf">Merge into GRF (Use when updating files inside a GRF)</label>
+            </div>
+
+            <div class="form-group">
+                <label>Files to Include</label>
+                <button class="secondary-btn" onclick="external.invoke('select_files')">Browse Files...</button>
+                <div id="file-list">
+                    <div style="color:#aaa; text-align:center; padding-top:60px;">No files selected</div>
+                </div>
+            </div>
+
+            <button onclick="generate()">Generate Patch</button>
+        </div>
+
+        <div class="logs" id="logs">Ready...</div>
     </div>
 
     <script>
         var selectedFiles = [];
+        var selectedExe = '';
+        var selectedYml = '';
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active'); });
+
+            if (tabName === 'embed') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('tab-embed').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('tab-patch').classList.add('active');
+            }
+        }
+
+        function exeSelected(path) {
+            selectedExe = path;
+            var display = document.getElementById('exe-display');
+            display.textContent = path;
+            display.classList.remove('empty');
+            logMessage('EXE selecionado: ' + path.split('\\').pop());
+        }
+
+        function ymlSelected(path) {
+            selectedYml = path;
+            var display = document.getElementById('yml-display');
+            display.textContent = path;
+            display.classList.remove('empty');
+            logMessage('YML selecionado: ' + path.split('\\').pop());
+        }
+
+        function embedConfig() {
+            if (!selectedExe) {
+                alert('Selecione o executável do patcher primeiro.');
+                return;
+            }
+            if (!selectedYml) {
+                alert('Selecione o arquivo de configuração YML primeiro.');
+                return;
+            }
+
+            var payload = {
+                exe_path: selectedExe,
+                yml_path: selectedYml
+            };
+
+            logMessage('Embutindo configuração...');
+            external.invoke('embed:' + JSON.stringify(payload));
+        }
 
         function filesSelected(files) {
-            // files is already an object/array because we eval it directly in JS
             selectedFiles = files;
             renderFiles();
         }
@@ -215,7 +376,6 @@
             };
 
             var json = JSON.stringify(payload);
-            // We use a prefix to distinguish from other commands
             external.invoke('generate:' + json);
         }
     </script>

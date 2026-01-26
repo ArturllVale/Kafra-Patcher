@@ -9,12 +9,16 @@ use tao::{
 };
 use serde::Deserialize;
 
+use crate::embed::embed_config_in_exe;
 use crate::generator::generate_patch_from_definition;
 use crate::patch_definition::{PatchDefinition, PatchEntry};
 
 enum UiEvent {
     SelectFiles,
+    SelectExe,
+    SelectYml,
     Generate(String),
+    Embed(String),
 }
 
 pub fn run_ui() {
@@ -22,8 +26,8 @@ pub fn run_ui() {
     let proxy = event_loop.create_proxy();
     
     let window = WindowBuilder::new()
-        .with_title("MKPatch UI")
-        .with_inner_size(LogicalSize::new(600.0, 650.0))
+        .with_title("MKPatch Tools")
+        .with_inner_size(LogicalSize::new(600.0, 700.0))
         .with_resizable(true)
         .build(&event_loop)
         .unwrap();
@@ -34,24 +38,27 @@ pub fn run_ui() {
     let handler = move |_: &tao::window::Window, req: String| {
         if req == "select_files" {
             let _ = handler_proxy.send_event(UiEvent::SelectFiles);
+        } else if req == "select_exe" {
+            let _ = handler_proxy.send_event(UiEvent::SelectExe);
+        } else if req == "select_yml" {
+            let _ = handler_proxy.send_event(UiEvent::SelectYml);
         } else if req.starts_with("generate:") {
             let json_str = req[9..].to_string();
             let _ = handler_proxy.send_event(UiEvent::Generate(json_str));
+        } else if req.starts_with("embed:") {
+            let json_str = req[6..].to_string();
+            let _ = handler_proxy.send_event(UiEvent::Embed(json_str));
         }
     };
 
     let webview = WebViewBuilder::new(window)
-        .unwrap() // WebViewBuilder::new returns Result
+        .unwrap()
         .with_html(html_content)
-        .unwrap() // assuming simple html content
+        .unwrap()
         .with_initialization_script("window.external = { invoke: function(s) { window.ipc.postMessage(s); } };")
         .with_ipc_handler(handler)
-        // .with_devtools(true) // debug was enabled in old code
         .build()
         .unwrap();
-    
-    // Open devtools if debug was true? default is usually disabled in release, enabled in debug.
-    // wry 0.24 enables devtools by default for debug builds I think.
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -61,8 +68,17 @@ pub fn run_ui() {
                 UiEvent::SelectFiles => {
                     handle_select_files(&webview);
                 },
+                UiEvent::SelectExe => {
+                    handle_select_exe(&webview);
+                },
+                UiEvent::SelectYml => {
+                    handle_select_yml(&webview);
+                },
                 UiEvent::Generate(json_str) => {
                     handle_generate(&webview, &json_str);
+                },
+                UiEvent::Embed(json_str) => {
+                    handle_embed(&webview, &json_str);
                 }
             },
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
@@ -81,10 +97,87 @@ fn handle_select_files(webview: &WebView) {
     );
 
     if let Some(files) = files {
-        // format as json array string
         let files_json = serde_json::to_string(&files).unwrap_or("[]".to_string());
         let js = format!("filesSelected({})", files_json);
         let _ = webview.evaluate_script(&js);
+    }
+}
+
+fn handle_select_exe(webview: &WebView) {
+    let file = tfd::open_file_dialog(
+        "Selecionar Executável do Patcher",
+        "",
+        Some((&["*.exe"], "Executáveis (*.exe)")),
+    );
+
+    if let Some(path) = file {
+        let path_escaped = path.replace('\\', "\\\\").replace('"', "\\\"");
+        let js = format!("exeSelected(\"{}\")", path_escaped);
+        let _ = webview.evaluate_script(&js);
+    }
+}
+
+fn handle_select_yml(webview: &WebView) {
+    let file = tfd::open_file_dialog(
+        "Selecionar Arquivo de Configuração",
+        "",
+        Some((&["*.yml", "*.yaml"], "Arquivos YAML (*.yml, *.yaml)")),
+    );
+
+    if let Some(path) = file {
+        let path_escaped = path.replace('\\', "\\\\").replace('"', "\\\"");
+        let js = format!("ymlSelected(\"{}\")", path_escaped);
+        let _ = webview.evaluate_script(&js);
+    }
+}
+
+#[derive(Deserialize)]
+struct EmbedInput {
+    exe_path: String,
+    yml_path: String,
+}
+
+fn handle_embed(webview: &WebView, json_str: &str) {
+    let input: EmbedInput = match serde_json::from_str(json_str) {
+        Ok(i) => i,
+        Err(e) => {
+            let _ = webview.evaluate_script(&format!("logMessage('Erro ao processar input: {}')", e));
+            return;
+        }
+    };
+
+    let exe_path = PathBuf::from(&input.exe_path);
+    let yml_path = PathBuf::from(&input.yml_path);
+    
+    // Gerar nome do arquivo de saída
+    let output_filename = exe_path
+        .file_stem()
+        .map(|s| format!("{}_embedded.exe", s.to_string_lossy()))
+        .unwrap_or_else(|| "output_embedded.exe".to_string());
+    
+    let output_path = exe_path.parent()
+        .map(|p| p.join(&output_filename))
+        .unwrap_or_else(|| PathBuf::from(&output_filename));
+
+    let _ = webview.evaluate_script("logMessage('Processando...')");
+
+    match embed_config_in_exe(&exe_path, &yml_path, &output_path) {
+        Ok(_) => {
+            let output_display = output_path.display().to_string().replace('\\', "\\\\");
+            let _ = webview.evaluate_script(&format!(
+                "logMessage('✅ Sucesso! Arquivo gerado: {}')", 
+                output_display
+            ));
+            let _ = webview.evaluate_script(&format!(
+                "alert('Config embutido com sucesso!\\n\\nArquivo gerado:\\n{}')",
+                output_path.file_name().unwrap_or_default().to_string_lossy()
+            ));
+        },
+        Err(e) => {
+            let error_msg = format!("{:#}", e).replace('"', "'");
+            let _ = webview.evaluate_script(&format!("logMessage('❌ Erro: {}')", error_msg));
+            let _ = webview.evaluate_script(&format!("alert('Erro ao embutir config:\\n{}')", error_msg));
+        }
     }
 }
 
@@ -114,9 +207,9 @@ fn handle_generate(webview: &WebView, json_str: &str) {
         let path = Path::new(f);
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         PatchEntry {
-            relative_path: f.clone(), // Absolute path
+            relative_path: f.clone(),
             is_removed: false,
-            in_grf_path: Some(filename), // Flat in GRF for now
+            in_grf_path: Some(filename),
         }
     }).collect();
     
@@ -128,7 +221,6 @@ fn handle_generate(webview: &WebView, json_str: &str) {
     };
 
     let output_path = PathBuf::from(&input.output_filename);
-    // Ensure .thor extension
     let output_path = if output_path.extension().is_none() {
         output_path.with_extension("thor")
     } else {
@@ -137,7 +229,6 @@ fn handle_generate(webview: &WebView, json_str: &str) {
 
     let _ = webview.evaluate_script("logMessage('Generating patch...')");
     
-    // We pass "." as base dir because our relative_paths are absolute
     match generate_patch_from_definition(def_for_gen, ".", &output_path) {
         Ok(_) => {
             let output_display = output_path.display().to_string().replace("\\", "\\\\");
