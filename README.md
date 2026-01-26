@@ -20,7 +20,6 @@
 - [Janela Sem Bordas e Transparência](#-janela-sem-bordas-e-transparência)
 - [Sistema de Atualizações](#-sistema-de-atualizações)
 - [Callback Functions (JavaScript)](#-callback-functions-javascript)
-- [Criando Patches com mkpatch](#-criando-patches-com-mkpatch)
 - [Compilação do Projeto](#-compilação-do-projeto)
 - [Exemplos](#-exemplos)
 - [Licença](#-licença)
@@ -515,61 +514,6 @@ function notificationInProgress() {
     alert('Já existe uma atualização em andamento!');
 }
 ```
-
----
-
-## 📦 Criando Patches com mkpatch
-
-O utilitário `mkpatch` gera arquivos `.thor` para atualizar o jogo.
-
-### Uso Básico
-
-```bash
-mkpatch.exe patch.yml output.thor
-```
-
-### Configuração do patch.yml
-
-```yaml
-use_grf_merging: true              # true = coloca arquivos dentro do GRF
-target_grf_name: meuservidor.grf   # GRF de destino
-include_checksums: true            # Incluir checksums (recomendado)
-
-entries:
-  # Adicionar arquivo único
-  - relative_path: data\clientinfo.xml
-    in_grf_path: data\clientinfo.xml
-  
-  # Adicionar pasta inteira
-  - relative_path: data\sprite\monster
-  
-  # Renomear/mover arquivo no GRF
-  - relative_path: local\clientinfo.xml
-    in_grf_path: data\sclientinfo.xml
-  
-  # Remover arquivo do GRF
-  - relative_path: data\arquivo_antigo.txt
-    is_removed: true
-```
-
-### Opções Disponíveis
-
-| Opção | Descrição |
-|-------|-----------|
-| `use_grf_merging` | `true` para modificar GRF, `false` para extrair arquivos |
-| `target_grf_name` | Nome do GRF a ser modificado |
-| `include_checksums` | Inclui verificação de integridade |
-| `relative_path` | Caminho local do arquivo/pasta |
-| `in_grf_path` | Caminho dentro do GRF (se diferente) |
-| `is_removed` | `true` para remover arquivo |
-
-### Fluxo de Trabalho
-
-1. Faça suas alterações nos arquivos do jogo
-2. Crie/edite o `patch.yml` com as alterações
-3. Execute `mkpatch.exe patch.yml meuPatch.thor`
-4. Upload do `.thor` para `patch_url` no servidor
-5. Adicione o nome do arquivo no `plist.txt`
 
 ---
 
