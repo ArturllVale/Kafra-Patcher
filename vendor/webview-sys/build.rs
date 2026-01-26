@@ -9,10 +9,11 @@ fn main() {
     if target.contains("linux") || target.contains("bsd") {
         // linux or bsd need to link to webkit2gtk library only,
         // there is no C/C++ code to compile as in other platforms
-        pkg_config::Config::new()
-            .atleast_version("2.8")
-            .probe("webkit2gtk-4.0")
-            .unwrap();
+        let mut config = pkg_config::Config::new();
+        config.atleast_version("2.8");
+        if config.probe("webkit2gtk-4.0").is_err() {
+            config.probe("webkit2gtk-4.1").unwrap();
+        }
 
         return;
     }

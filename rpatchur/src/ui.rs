@@ -15,7 +15,9 @@ use winapi::um::winuser::{
     FindWindowA, GWL_EXSTYLE, HTCAPTION, LWA_COLORKEY, SW_MINIMIZE, WM_NCLBUTTONDOWN,
     WS_EX_LAYERED,
 };
+#[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
+#[cfg(windows)]
 use std::ffi::CString;
 
 /// 'Opaque" struct that can be used to update the UI.
