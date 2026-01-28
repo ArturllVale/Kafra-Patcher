@@ -143,6 +143,7 @@ fn main() -> Result<()> {
                      ui::start_game_client(&config, &args);
                 },
                 UiEvent::Exit => {
+                    ui::save_window_position(webview.window());
                     *control_flow = ControlFlow::Exit;
                 },
                 UiEvent::RunScript(script) => {
@@ -152,6 +153,7 @@ fn main() -> Result<()> {
                 }
             },
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                ui::save_window_position(webview.window());
                 *control_flow = ControlFlow::Exit;
             },
             _ => ()

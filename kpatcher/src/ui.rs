@@ -1,7 +1,7 @@
 use crate::patcher::{get_patcher_name, PatcherCommand, PatcherConfiguration};
 use crate::process::start_executable;
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
 use std::fs;
@@ -9,12 +9,43 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tao::{
-    dpi::LogicalSize,
+    dpi::{LogicalSize, PhysicalPosition},
     event_loop::{EventLoop, EventLoopProxy},
     window::{Window, WindowBuilder},
 };
 use tinyfiledialogs as tfd;
 use wry::webview::{WebView, WebViewBuilder};
+
+const WINDOW_STATE_FILE: &str = "kpatcher_state.json";
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WindowState {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl WindowState {
+    pub fn load() -> Option<WindowState> {
+        let content = fs::read_to_string(WINDOW_STATE_FILE).ok()?;
+        serde_json::from_str(&content).ok()
+    }
+
+    pub fn save(&self) {
+        if let Ok(content) = serde_json::to_string_pretty(self) {
+            let _ = fs::write(WINDOW_STATE_FILE, content);
+        }
+    }
+}
+
+pub fn save_window_position(window: &Window) {
+    if let Ok(pos) = window.outer_position() {
+        let state = WindowState {
+            x: pos.x,
+            y: pos.y,
+        };
+        state.save();
+    }
+}
 
 #[cfg(windows)]
 use tao::platform::windows::WindowExtWindows;
@@ -72,7 +103,7 @@ pub fn build_webview(
     patching_thread_tx: flume::Sender<PatcherCommand>,
     proxy: EventLoopProxy<UiEvent>,
 ) -> Result<(WebView, Arc<AtomicBool>)> {
-    let window = WindowBuilder::new()
+    let mut window_builder = WindowBuilder::new()
         .with_title(&config.window.title)
         .with_inner_size(LogicalSize::new(
             config.window.width as f64,
@@ -80,7 +111,14 @@ pub fn build_webview(
         ))
         .with_resizable(config.window.resizable)
         .with_decorations(!config.window.frameless.unwrap_or(false))
-        .with_transparent(true)
+        .with_transparent(true);
+
+    // Restore saved window position if available
+    if let Some(state) = WindowState::load() {
+        window_builder = window_builder.with_position(PhysicalPosition::new(state.x, state.y));
+    }
+
+    let window = window_builder
         .build(event_loop)
         .context("Failed to create window")?;
 
