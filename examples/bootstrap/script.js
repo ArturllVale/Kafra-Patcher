@@ -12,7 +12,7 @@ function patchingStatusReady() {
     $("#button-play").prop('disabled', false);
 }
 
-function patchingStatusError(errorMsg) {
+function patchingStatusError(errorMsg, playWithError) {
     $("#download-progress-bar")
         .css("width", "100%")
         .attr("aria-valuenow", "100")
@@ -20,6 +20,9 @@ function patchingStatusError(errorMsg) {
         .removeClass("bg-warning")
         .addClass("bg-danger");
     $("#download-progress-text").text("Falha: " + errorMsg);
+    if (playWithError) {
+        $("#button-play").prop('disabled', false);
+    }
 }
 
 function patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec) {

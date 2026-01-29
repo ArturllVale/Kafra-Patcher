@@ -1,7 +1,12 @@
+#[cfg(windows)]
 fn main() {
-    // No special linking needed if we provide the shim or don't use the feature
-    // However, tinyfiledialogs still wants it apparently.
-    // We let the shim in main.rs handle it, or cargo link shcore if strictly needed (but it failed).
-    // So we keep this empty or minimal.
-    println!("cargo:rerun-if-changed=build.rs");
+    let mut res = winres::WindowsResource::new();
+    res.set_icon("resources/mkpatch.ico");
+
+    if let Err(e) = res.compile() {
+        println!("cargo:warning=Failed to compile resources: {}", e);
+    }
 }
+
+#[cfg(not(windows))]
+fn main() {}

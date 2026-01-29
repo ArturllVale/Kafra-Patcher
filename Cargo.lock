@@ -1859,6 +1859,7 @@ dependencies = [
  "tao",
  "tinyfiledialogs",
  "walkdir",
+ "winres",
  "wry",
 ]
 

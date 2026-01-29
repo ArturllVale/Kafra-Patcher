@@ -126,7 +126,8 @@ fn main() -> Result<()> {
                     let script = match status {
                         ui::PatchingStatus::Ready => "patchingStatusReady()".to_string(),
                         ui::PatchingStatus::Error(msg) => {
-                            format!("patchingStatusError(\"{}\")", msg)
+                            let play_with_error = config.play.play_with_error.unwrap_or(false);
+                            format!("patchingStatusError(\"{}\", {})", msg, play_with_error)
                         }
                         ui::PatchingStatus::DownloadInProgress(nb, total, rate) => {
                             format!("patchingStatusDownloading({}, {}, {})", nb, total, rate)
@@ -144,10 +145,6 @@ fn main() -> Result<()> {
                 }
                 UiEvent::SetPatchInProgress(val) => {
                     patching_in_progress.store(val, std::sync::atomic::Ordering::Relaxed);
-                }
-                UiEvent::LaunchGame => {
-                    let args = config.play.arguments.clone();
-                    ui::start_game_client(&config, &args);
                 }
                 UiEvent::Exit => {
                     ui::save_window_position(webview.window());

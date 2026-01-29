@@ -105,6 +105,7 @@ play:
   path: ragexe.exe             # Executável do jogo
   arguments: ["1sak1"]         # Argumentos (opcional)
   exit_on_success: true        # Fechar patcher ao iniciar jogo?
+  play_with_error: false       # Habilitar botão Play se atualização falhar?
 
 # ═══════════════════════════════════════════════════════════════
 # BOTÃO CONFIGURAÇÕES
@@ -456,13 +457,21 @@ function patchingStatusReady() {
 }
 ```
 
-### patchingStatusError(errorMsg)
-Chamada quando ocorre um erro.
+### patchingStatusError(errorMsg, playWithError)
+Chamada quando ocorre um erro na atualização.
+
+- `errorMsg`: Mensagem de erro
+- `playWithError`: Boolean indicando se o botão Play deve ser habilitado (baseado na configuração `play_with_error` do YAML)
 
 ```javascript
-function patchingStatusError(errorMsg) {
+function patchingStatusError(errorMsg, playWithError) {
     document.getElementById('progress-text').textContent = 'Erro: ' + errorMsg;
     document.getElementById('progress-bar').classList.add('error');
+    
+    // Se configurado, habilita o botão Play mesmo com erro
+    if (playWithError) {
+        document.getElementById('btn-play').disabled = false;
+    }
 }
 ```
 

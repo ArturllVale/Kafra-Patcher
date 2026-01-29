@@ -55,7 +55,6 @@ use winapi::um::winuser::SetWindowRgn;
 pub enum UiEvent {
     PatchingStatus(PatchingStatus),
     SetPatchInProgress(bool),
-    LaunchGame,
     Exit,
     RunScript(String),
 }
@@ -76,10 +75,6 @@ impl UiController {
 
     pub fn set_patch_in_progress(&self, value: bool) {
         let _ = self.proxy.send_event(UiEvent::SetPatchInProgress(value));
-    }
-
-    pub fn launch_game(&self) {
-        let _ = self.proxy.send_event(UiEvent::LaunchGame);
     }
 }
 
