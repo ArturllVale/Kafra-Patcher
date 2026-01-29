@@ -474,14 +474,22 @@ async fn download_patches_concurrent_inner(
         .await?;
 
         // Check the archive's integrity if required
-        let context = || {
-            format!(
-                "Failed to check archive's integrity: '{}'",
-                patch_info.file_name
-            )
-        };
-        if ensure_integrity && !is_archive_valid(&local_file_path).with_context(context)? {
-            return Err(anyhow!("Archive '{}' is corrupt", patch_info.file_name));
+        if ensure_integrity {
+            let path_to_check = local_file_path.clone();
+            let validity_check = tokio::task::spawn_blocking(move || is_archive_valid(&path_to_check))
+                .await
+                .map_err(|e| anyhow!("Integrity check task failed: {}", e))?;
+
+            let context = || {
+                format!(
+                    "Failed to check archive's integrity: '{}'",
+                    patch_info.file_name
+                )
+            };
+
+            if !validity_check.with_context(context)? {
+                return Err(anyhow!("Archive '{}' is corrupt", patch_info.file_name));
+            }
         }
 
         // Update status
