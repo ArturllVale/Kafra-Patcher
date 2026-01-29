@@ -465,10 +465,11 @@ mod tests {
         //Empty patch list
         let empty_thor_patch_list = patch_list_from_string("");
         assert_eq!(empty_thor_patch_list.len(), 0);
-        // TODO(LinkZ): Ensure patch list is ordered by patch index
         // Regular patch list
         let thor_patch_list = patch_list_from_string(plist_content);
         assert_eq!(thor_patch_list.len(), expected_content.len());
+        // Ensure patch list is ordered by patch index
+        assert!(thor_patch_list.windows(2).all(|w| w[0].index <= w[1].index));
         for patch_info in thor_patch_list {
             assert!(expected_content.contains_key(&patch_info.index));
             assert_eq!(patch_info.file_name, expected_content[&patch_info.index]);
