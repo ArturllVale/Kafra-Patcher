@@ -1,12 +1,12 @@
 # Configuração da janela do patcher
 window:
-  title: Kafra Patcher   # Título da janela principal
-  width: 780             # Largura da janela principal (em pixels)
-  height: 580            # Altura da janela principal (em pixels)
-  resizable: false       # Define se a janela pode ser redimensionada
+  title: Kafra Patcher # Título da janela principal
+  width: 780 # Largura da janela principal (em pixels)
+  height: 580 # Altura da janela principal (em pixels)
+  resizable: false # Define se a janela pode ser redimensionada
   # Funcionalidades extras:
-  frameless: true        # Oculta bordas e barra de título
-  border_radius: 20      # Raio da borda da janela (em pixels)
+  frameless: true # Oculta bordas e barra de título
+  border_radius: 20 # Raio da borda da janela (em pixels)
 
 # Comandos JavaScript para UI (janelas sem borda)
 # Para criar novos botões, use o onclick="external.invoke('comando')" no seu HTML.
@@ -26,36 +26,36 @@ window:
 
 # Configuração do botão Play
 play:
-  path: ragexe.exe        # Caminho relativo para o executável do jogo
-  arguments: ["1sak1"]    # Argumentos de linha de comando passados ao executável
-  exit_on_success: false  # (Opcional) Fecha o patcher quando o jogo iniciar. Padrão: true
-  play_with_error: false  # (Opcional) Habilita o botão Play mesmo se a atualização falhar. Padrão: false
+  path: ragexe.exe # Caminho relativo para o executável do jogo
+  arguments: ["-1sak1"] # Argumentos de linha de comando passados ao executável
+  exit_on_success: false # (Opcional) Fecha o patcher quando o jogo iniciar. Padrão: true
+  play_with_error: false # (Opcional) Habilita o botão Play mesmo se a atualização falhar. Padrão: false
   minimize_on_start: true # (Opcional) Minimiza o patcher quando o jogo iniciar. Requer exit_on_success: false
 
 # Configuração do botão Setup
 setup:
-  path: Setup.exe         # Caminho relativo para o executável de configuração
-  arguments: []           # Argumentos de linha de comando passados ao executável
-  exit_on_success: false  # (Opcional) Fecha o patcher quando o setup iniciar. Padrão: false
+  path: Setup.exe # Caminho relativo para o executável de configuração
+  arguments: [] # Argumentos de linha de comando passados ao executável
+  exit_on_success: false # (Opcional) Fecha o patcher quando o setup iniciar. Padrão: false
 
 # Configuração da interface web
 web:
-  index_url: bootstrap/index.html          # URL da página web usada como interface
-  preferred_patch_server: US Patch Server  # (Opcional) Servidor de patch prioritário
+  index_url: bootstrap/index.html # URL da página web usada como interface
+  preferred_patch_server: US Patch Server # (Opcional) Servidor de patch prioritário
   patch_servers:
-    - name: EU Patch Server                          # Nome que identifica o servidor de patch
-      plist_url: https://eu.myserver.com/plist.txt   # URL do arquivo plist.txt contendo a lista de patches
-      patch_url: https://eu.myserver.com/data/       # URL do diretório contendo os patches
+    - name: EU Patch Server # Nome que identifica o servidor de patch
+      plist_url: https://eu.myserver.com/plist.txt # URL do arquivo plist.txt contendo a lista de patches
+      patch_url: https://eu.myserver.com/data/ # URL do diretório contendo os patches
     - name: US Patch Server
       plist_url: https://us.myserver.com/plist.txt
       patch_url: https://us.myserver.com/data/
 
 # Configuração do cliente
 client:
-  default_grf_name: myserver.grf  # Nome do GRF padrão quando um patch THOR indicar o GRF padrão
+  default_grf_name: myserver.grf # Nome do GRF padrão quando um patch THOR indicar o GRF padrão
 
 # Configuração de patching
 patching:
-  in_place: true         # Aplica patches diretamente no GRF (mais rápido, usa menos espaço)
-  check_integrity: true  # Verifica integridade dos patches baixados
-  create_grf: true       # Cria GRFs que não existem
+  in_place: true # Aplica patches diretamente no GRF (mais rápido, usa menos espaço)
+  check_integrity: true # Verifica integridade dos patches baixados
+  create_grf: true # Cria GRFs que não existem
