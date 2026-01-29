@@ -45,6 +45,9 @@ winapi = { version = "0.3.6", features = [
     "dwmapi",
 ] }
 
+[build-dependencies]
+winres = "0.1"
+
 [dev-dependencies]
 twox-hash = "1.5"
 walkdir = "2.3"

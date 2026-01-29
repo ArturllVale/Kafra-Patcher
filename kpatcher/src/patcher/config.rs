@@ -28,6 +28,7 @@ pub struct WindowConfiguration {
     pub height: i32,
     pub resizable: bool,
     pub frameless: Option<bool>,
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub border_radius: Option<i32>,
 }
 
