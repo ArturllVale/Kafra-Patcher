@@ -100,10 +100,9 @@ fn apply_grf_to_grf_oop(
 
     // Add files from the original archive
     let mut target_archive = GrfArchive::open(&backup_file_path)?;
-    let (_major, _minor) = (
-        target_archive.version_major(),
-        target_archive.version_minor(),
-    );
+    // Preservar versão do GRF original
+    let original_version_major = target_archive.version_major();
+    let original_version_minor = target_archive.version_minor();
 
     for entry in target_archive.get_entries() {
         // If file exists in patch, skip it (it will be overwritten)
@@ -136,7 +135,8 @@ fn apply_grf_to_grf_oop(
 
     {
         let grf_file = fs::File::create(target_grf_path)?;
-        let mut builder = GrfArchiveBuilder::create(grf_file, 2, 0)?;
+        // Usar versão do GRF original para preservar criptografia
+        let mut builder = GrfArchiveBuilder::create(grf_file, original_version_major, original_version_minor)?;
         for (relative_path, entry) in merge_entries {
             match entry.source {
                 MergeEntrySource::TargetGrf => {
@@ -194,8 +194,14 @@ fn apply_patch_to_grf_oop<R: Read + Seek>(
 
     // Prepare file entries that'll be used to make the patched GRF
     let mut merge_entries: HashMap<String, MergeEntry> = HashMap::new();
+    
     // Add files from the original archive while discarding files remove in the patch
     let mut grf_archive = GrfArchive::open(&backup_file_path)?;
+    
+    // Preservar versão do GRF original
+    let original_version_major = grf_archive.version_major();
+    let original_version_minor = grf_archive.version_minor();
+    
     for entry in grf_archive.get_entries() {
         if let Some(e) = thor_archive.get_file_entry(&entry.relative_path) {
             if e.is_removed {
@@ -230,7 +236,8 @@ fn apply_patch_to_grf_oop<R: Read + Seek>(
 
     {
         let grf_file = fs::File::create(grf_file_path)?;
-        let mut builder = GrfArchiveBuilder::create(grf_file, 2, 0)?;
+        // Usar versão do GRF original para preservar criptografia
+        let mut builder = GrfArchiveBuilder::create(grf_file, original_version_major, original_version_minor)?;
         for (relative_path, entry) in merge_entries {
             match entry.source {
                 MergeEntrySource::TargetGrf => {

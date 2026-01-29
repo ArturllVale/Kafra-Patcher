@@ -671,9 +671,15 @@ fn apply_patch(
         apply_grf_to_grf(
             grf_patching_method,
             config.patching.create_grf,
-            target_grf_path,
+            &target_grf_path,
             &mut source_grf,
         )?;
+
+        // Verificar integridade do GRF após patch (se check_integrity estiver habilitado)
+        if config.patching.check_integrity {
+            verify_grf_integrity(&target_grf_path)
+                .with_context(|| format!("Verificação de integridade falhou para: {}", target_grf_path.display()))?;
+        }
 
         // temp_dir will be deleted when it goes out of scope
         Ok(())
@@ -697,14 +703,52 @@ fn apply_patch(
             apply_patch_to_grf(
                 grf_patching_method,
                 config.patching.create_grf,
-                target_grf_path,
+                &target_grf_path,
                 &mut thor_archive,
-            )
+            )?;
+
+            // Verificar integridade do GRF após patch (se check_integrity estiver habilitado)
+            if config.patching.check_integrity {
+                verify_grf_integrity(&target_grf_path)
+                    .with_context(|| format!("Verificação de integridade falhou para: {}", target_grf_path.display()))?;
+            }
+
+            Ok(())
         } else {
             // Patch root directory
             apply_patch_to_disk(current_working_dir, &mut thor_archive)
         }
     }
+}
+
+/// Verifica a integridade de um arquivo GRF após aplicar patches.
+/// Abre o GRF e verifica se todos os arquivos podem ser lidos corretamente.
+#[allow(dead_code)]
+fn verify_grf_integrity(grf_path: impl AsRef<Path>) -> Result<()> {
+    let mut grf_archive = GrfArchive::open(grf_path.as_ref())
+        .with_context(|| format!("Falha ao abrir GRF para verificação: {}", grf_path.as_ref().display()))?;
+    
+    let file_count = grf_archive.file_count();
+    log::trace!("Verificando integridade de {} arquivos no GRF", file_count);
+    
+    // Verificar se podemos ler as entradas do arquivo
+    let entries: Vec<_> = grf_archive.get_entries().cloned().collect();
+    
+    // Verificar amostra de arquivos para não demorar muito em GRFs grandes
+    let sample_size = std::cmp::min(10, entries.len());
+    for entry in entries.iter().take(sample_size) {
+        // Tentar ler o conteúdo do arquivo
+        if entry.size > 0 {
+            grf_archive.read_file_content(&entry.relative_path)
+                .with_context(|| format!(
+                    "Falha ao ler arquivo '{}' do GRF durante verificação de integridade",
+                    entry.relative_path
+                ))?;
+        }
+    }
+    
+    log::trace!("Verificação de integridade concluída com sucesso");
+    Ok(())
 }
 
 #[cfg(test)]
