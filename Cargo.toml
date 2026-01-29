@@ -3,4 +3,5 @@ lto = true
 panic = 'abort'
 
 [workspace]
+resolver = "2"
 members = ["gruf", "kpatcher", "mkpatch"]

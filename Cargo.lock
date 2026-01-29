@@ -1628,7 +1628,7 @@ dependencies = [
 
 [[package]]
 name = "kpatcher"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "advisory-lock",
  "anyhow",
@@ -1845,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "mkpatch"
-version = "0.1.1"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "flate2",
