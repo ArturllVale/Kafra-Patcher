@@ -12,9 +12,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use simple_logger::SimpleLogger;
 use structopt::StructOpt;
-use tinyfiledialogs as tfd;
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop};
+use tinyfiledialogs as tfd;
 use ui::{UiController, UiEvent};
 
 use patcher::{
@@ -39,7 +39,7 @@ fn main() -> Result<()> {
     if let Ok(current_exe) = env::current_exe() {
         let old_exe = current_exe.with_extension("exe.old");
         if old_exe.exists() {
-             let _ = fs::remove_file(old_exe);
+            let _ = fs::remove_file(old_exe);
         }
     }
 
@@ -87,18 +87,15 @@ fn main() -> Result<()> {
     // Event Loop
     let event_loop = EventLoop::<UiEvent>::with_user_event();
     let proxy = event_loop.create_proxy();
-    
+
     // Create a channel to allow the patcher thread to communicate with the patching thread (which we spawn)
     // Wait, the patching thread receives PatcherCommand from UI.
     // The UI Controller sends UiEvent to Main Thread.
     let (tx, rx) = flume::bounded(32);
-    
-    let (webview, patching_in_progress) = ui::build_webview(
-        &event_loop, 
-        config.clone(), 
-        tx, 
-        proxy.clone()
-    ).with_context(|| "Failed to build a web view")?;
+
+    let (webview, patching_in_progress) =
+        ui::build_webview(&event_loop, config.clone(), tx, proxy.clone())
+            .with_context(|| "Failed to build a web view")?;
 
     // Spawn a patching thread
     let ui_ctrl = UiController::new(proxy);
@@ -107,8 +104,9 @@ fn main() -> Result<()> {
     let _patching_thread = new_patching_thread(rx, ui_ctrl, config.clone());
 
     // Prevent dragging images
-    webview.evaluate_script(
-        r#"
+    webview
+        .evaluate_script(
+            r#"
         window.addEventListener('load', function() {
             var style = document.createElement('style');
             style.innerHTML = 'img { -webkit-user-drag: none; user-select: none; }';
@@ -116,7 +114,8 @@ fn main() -> Result<()> {
             document.addEventListener('dragstart', function(e) { e.preventDefault(); });
         });
         "#,
-    ).with_context(|| "Failed to inject drag prevention script")?;
+        )
+        .with_context(|| "Failed to inject drag prevention script")?;
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -124,39 +123,50 @@ fn main() -> Result<()> {
         match event {
             Event::UserEvent(ui_event) => match ui_event {
                 UiEvent::PatchingStatus(status) => {
-                     let script = match status {
+                    let script = match status {
                         ui::PatchingStatus::Ready => "patchingStatusReady()".to_string(),
-                        ui::PatchingStatus::Error(msg) => format!("patchingStatusError(\"{}\")", msg),
-                        ui::PatchingStatus::DownloadInProgress(nb, total, rate) => format!("patchingStatusDownloading({}, {}, {})", nb, total, rate),
-                        ui::PatchingStatus::InstallationInProgress(nb, total) => format!("patchingStatusInstalling({}, {})", nb, total),
-                        ui::PatchingStatus::ManualPatchApplied(name) => format!("patchingStatusPatchApplied(\"{}\")", name),
-                     };
-                     if let Err(e) = webview.evaluate_script(&script) {
-                         log::warn!("Failed to dispatch patching status: {}.", e);
-                     }
-                },
+                        ui::PatchingStatus::Error(msg) => {
+                            format!("patchingStatusError(\"{}\")", msg)
+                        }
+                        ui::PatchingStatus::DownloadInProgress(nb, total, rate) => {
+                            format!("patchingStatusDownloading({}, {}, {})", nb, total, rate)
+                        }
+                        ui::PatchingStatus::InstallationInProgress(nb, total) => {
+                            format!("patchingStatusInstalling({}, {})", nb, total)
+                        }
+                        ui::PatchingStatus::ManualPatchApplied(name) => {
+                            format!("patchingStatusPatchApplied(\"{}\")", name)
+                        }
+                    };
+                    if let Err(e) = webview.evaluate_script(&script) {
+                        log::warn!("Failed to dispatch patching status: {}.", e);
+                    }
+                }
                 UiEvent::SetPatchInProgress(val) => {
                     patching_in_progress.store(val, std::sync::atomic::Ordering::Relaxed);
-                },
+                }
                 UiEvent::LaunchGame => {
-                     let args = config.play.arguments.clone();
-                     ui::start_game_client(&config, &args);
-                },
+                    let args = config.play.arguments.clone();
+                    ui::start_game_client(&config, &args);
+                }
                 UiEvent::Exit => {
                     ui::save_window_position(webview.window());
                     *control_flow = ControlFlow::Exit;
-                },
+                }
                 UiEvent::RunScript(script) => {
-                     if let Err(e) = webview.evaluate_script(&script) {
-                         log::warn!("Failed to run script: {}.", e);
-                     }
+                    if let Err(e) = webview.evaluate_script(&script) {
+                        log::warn!("Failed to run script: {}.", e);
+                    }
                 }
             },
-            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
                 ui::save_window_position(webview.window());
                 *control_flow = ControlFlow::Exit;
-            },
-            _ => ()
+            }
+            _ => (),
         }
     });
 }

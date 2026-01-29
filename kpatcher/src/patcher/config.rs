@@ -91,49 +91,50 @@ pub fn retrieve_patcher_configuration(
 }
 
 /// Tenta extrair configuração embutida no final do executável.
-/// 
+///
 /// Formato esperado: [EXE] + [YAML gzip] + [tamanho u32 LE] + [marcador "KCFG"]
 fn extract_embedded_config() -> Result<PatcherConfiguration> {
     let exe_path = env::current_exe().context("Failed to get current executable path")?;
     let mut file = File::open(&exe_path).context("Failed to open executable")?;
-    
+
     let file_size = file.metadata()?.len();
     if file_size < 8 {
         anyhow::bail!("File too small to contain embedded config");
     }
-    
+
     // Ler os últimos 8 bytes (tamanho + marcador)
     file.seek(SeekFrom::End(-8))?;
     let mut footer = [0u8; 8];
     file.read_exact(&mut footer)?;
-    
+
     // Verificar marcador
     if &footer[4..8] != CONFIG_MARKER {
         anyhow::bail!("No embedded config marker found");
     }
-    
+
     // Extrair tamanho do config comprimido
     let compressed_size = u32::from_le_bytes([footer[0], footer[1], footer[2], footer[3]]) as u64;
-    
+
     // Validar tamanho
     if compressed_size == 0 || compressed_size > file_size - 8 {
         anyhow::bail!("Invalid embedded config size");
     }
-    
+
     // Posicionar no início do config comprimido
     let config_start = file_size - 8 - compressed_size;
     file.seek(SeekFrom::Start(config_start))?;
-    
+
     // Ler o config comprimido
     let mut compressed_data = vec![0u8; compressed_size as usize];
     file.read_exact(&mut compressed_data)?;
-    
+
     // Descomprimir
     let mut decoder = GzDecoder::new(&compressed_data[..]);
     let mut yaml_content = String::new();
-    decoder.read_to_string(&mut yaml_content)
+    decoder
+        .read_to_string(&mut yaml_content)
         .context("Failed to decompress embedded config")?;
-    
+
     // Parse YAML
     serde_yaml::from_str(&yaml_content).context("Invalid embedded configuration")
 }

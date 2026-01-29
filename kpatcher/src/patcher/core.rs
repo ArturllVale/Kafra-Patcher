@@ -26,8 +26,8 @@ use super::cancellation::{
 use super::config::PatchServerInfo;
 use super::patching::{apply_patch_to_disk, apply_patch_to_grf, GrfPatchingMethod};
 use super::{get_patcher_name, PatcherCommand, PatcherConfiguration};
-use crate::ui::{PatchingStatus, UiController};
 use crate::patcher::patching::apply_grf_to_grf;
+use crate::ui::{PatchingStatus, UiController};
 
 /// Representation of a pending patch (a patch that's been downloaded but has
 /// not been applied yet).
@@ -57,7 +57,6 @@ pub async fn patcher_thread_routine(
                 return;
             }
             Ok(cmd) => match cmd {
-
                 PatcherCommand::StartUpdate => {
                     update_game(&ui_controller, config, rx).await;
                 }
@@ -636,11 +635,11 @@ fn apply_patch(
 
         if extension == "grf" {
             // Regular GRF, no decompression needed
-            // Copy to temp file to ensure we don't lock source if needed? 
-            // Or just use directly. But apply_grf_to_grf takes a path. 
+            // Copy to temp file to ensure we don't lock source if needed?
+            // Or just use directly. But apply_grf_to_grf takes a path.
             // If we use source path directly, we might need write access if InPlace, but here we are reading FROM it.
             // apply_grf_to_grf uses `source_grf` which is `&mut GrfArchive`.
-            // Let's just copy it to be safe and consistent with RGZ/GPF flow, 
+            // Let's just copy it to be safe and consistent with RGZ/GPF flow,
             // although for performance avoiding copy would be better.
             // But wait, `GzDecoder` produces a stream.
             // Let's just copy the file content to temp_grf_path logic.

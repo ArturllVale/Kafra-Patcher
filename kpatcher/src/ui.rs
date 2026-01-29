@@ -39,10 +39,7 @@ impl WindowState {
 
 pub fn save_window_position(window: &Window) {
     if let Ok(pos) = window.outer_position() {
-        let state = WindowState {
-            x: pos.x,
-            y: pos.y,
-        };
+        let state = WindowState { x: pos.x, y: pos.y };
         state.save();
     }
 }
@@ -131,7 +128,7 @@ pub fn build_webview(
     // Shared state for IPC handler
     let patching_in_progress = Arc::new(AtomicBool::new(false));
     let pip_clone = patching_in_progress.clone();
-    
+
     // Capture config and tx for IPC
     let ipc_config = config.clone();
     let ipc_tx = patching_thread_tx.clone();
@@ -144,13 +141,13 @@ pub fn build_webview(
                 let args = ipc_config.play.arguments.clone();
                 start_game_client(&ipc_config, &args);
                 if ipc_config.play.exit_on_success.unwrap_or(true) {
-                     let _ = ipc_proxy.send_event(UiEvent::Exit);
+                    let _ = ipc_proxy.send_event(UiEvent::Exit);
                 }
             }
             "setup" => {
                 handle_setup(&ipc_config);
                 if ipc_config.setup.exit_on_success.unwrap_or(false) {
-                     let _ = ipc_proxy.send_event(UiEvent::Exit);
+                    let _ = ipc_proxy.send_event(UiEvent::Exit);
                 }
             }
             "exit" => {
@@ -158,7 +155,8 @@ pub fn build_webview(
             }
             "start_update" => {
                 if pip_clone.load(Ordering::Relaxed) {
-                    let _ = ipc_proxy.send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
+                    let _ = ipc_proxy
+                        .send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
                 } else {
                     let _ = ipc_tx.send(PatcherCommand::StartUpdate);
                 }
@@ -171,9 +169,10 @@ pub fn build_webview(
             }
             "manual_patch" => {
                 if pip_clone.load(Ordering::Relaxed) {
-                     let _ = ipc_proxy.send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
+                    let _ = ipc_proxy
+                        .send_event(UiEvent::RunScript("notificationInProgress()".to_string()));
                 } else {
-                    // We need to open a dialog. tfd::open_file_dialog blocks. 
+                    // We need to open a dialog. tfd::open_file_dialog blocks.
                     // Is it safe on this thread? If this is the UI thread, it blocks UI.
                     // But `web-view` did it in invoke handler.
                     handle_manual_patch(&ipc_tx);
@@ -195,7 +194,9 @@ pub fn build_webview(
         .with_url(&config.web.index_url)?
         .with_transparent(true)
         // Inject polyfill for web-view's `external.invoke`
-        .with_initialization_script("window.external = { invoke: function(s) { window.ipc.postMessage(s); } };")
+        .with_initialization_script(
+            "window.external = { invoke: function(s) { window.ipc.postMessage(s); } };",
+        )
         .with_ipc_handler(ipc_handler)
         .build()?;
 
@@ -204,13 +205,15 @@ pub fn build_webview(
 
 pub fn start_game_client(config: &PatcherConfiguration, args: &[String]) {
     let client_exe = &config.play.path;
-    let _ = start_executable(client_exe, args).map_err(|e| log::warn!("Failed to start client: {}", e));
+    let _ =
+        start_executable(client_exe, args).map_err(|e| log::warn!("Failed to start client: {}", e));
 }
 
 fn handle_setup(config: &PatcherConfiguration) {
     let setup_exe = &config.setup.path;
     let setup_args = &config.setup.arguments;
-    let _ = start_executable(setup_exe, setup_args).map_err(|e| log::warn!("Failed to start setup: {}", e));
+    let _ = start_executable(setup_exe, setup_args)
+        .map_err(|e| log::warn!("Failed to start setup: {}", e));
 }
 
 fn handle_reset_cache() {
@@ -242,12 +245,19 @@ struct OpenUrlParameters {
     url: String,
 }
 
-fn handle_json_request(request: &str, config: &PatcherConfiguration, _window: &Window, _proxy: &EventLoopProxy<UiEvent>) {
+fn handle_json_request(
+    request: &str,
+    config: &PatcherConfiguration,
+    _window: &Window,
+    _proxy: &EventLoopProxy<UiEvent>,
+) {
     if let Ok(json_req) = serde_json::from_str::<Value>(request) {
         if let Some(function_name) = json_req["function"].as_str() {
             match function_name {
                 "login" => {
-                    if let Ok(params) = serde_json::from_value::<LoginParameters>(json_req["parameters"].clone()) {
+                    if let Ok(params) =
+                        serde_json::from_value::<LoginParameters>(json_req["parameters"].clone())
+                    {
                         let mut args = vec![
                             format!("-t:{}", params.password),
                             params.login,
@@ -258,7 +268,9 @@ fn handle_json_request(request: &str, config: &PatcherConfiguration, _window: &W
                     }
                 }
                 "open_url" => {
-                    if let Ok(params) = serde_json::from_value::<OpenUrlParameters>(json_req["parameters"].clone()) {
+                    if let Ok(params) =
+                        serde_json::from_value::<OpenUrlParameters>(json_req["parameters"].clone())
+                    {
                         let _ = open::that(params.url);
                     }
                 }
@@ -275,7 +287,7 @@ fn apply_border_radius(window: &Window, width: i32, height: i32, radius: i32) {
         let region = CreateRoundRectRgn(0, 0, width, height, radius, radius);
         if !region.is_null() {
             SetWindowRgn(hwnd, region, 1); // 1 = TRUE (redraw)
-            // Note: SetWindowRgn takes ownership of the region, so we don't delete it
+                                           // Note: SetWindowRgn takes ownership of the region, so we don't delete it
         }
     }
 }
