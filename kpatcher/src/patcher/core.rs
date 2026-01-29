@@ -10,7 +10,6 @@ use std::time::{Duration, Instant};
 // use advisory_lock::{AdvisoryFileLock, FileLockMode};
 use anyhow::{anyhow, Context, Result};
 use flate2::read::GzDecoder;
-use futures::executor::block_on;
 use futures::stream::{StreamExt, TryStreamExt};
 use gruf::grf::GrfArchive;
 use gruf::thor::{self, ThorArchive, ThorPatchInfo, ThorPatchList};
@@ -452,13 +451,11 @@ async fn download_patches_concurrent_inner(
             };
             // If speed is "available", update UI
             if let Some(downloaded_bytes_per_sec) = downloaded_bytes_per_sec {
-                block_on(async {
-                    ui_controller.dispatch_patching_status(PatchingStatus::DownloadInProgress(
-                        shared_patch_number_ref.load(Ordering::SeqCst),
-                        patch_count,
-                        downloaded_bytes_per_sec,
-                    ));
-                });
+                ui_controller.dispatch_patching_status(PatchingStatus::DownloadInProgress(
+                    shared_patch_number_ref.load(Ordering::SeqCst),
+                    patch_count,
+                    downloaded_bytes_per_sec,
+                ));
             }
             last_downloaded_bytes = dl_now;
         };
