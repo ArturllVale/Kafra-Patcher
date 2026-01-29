@@ -326,7 +326,12 @@ mod tests {
             // After patching
             assert!(expected_file_path.exists());
             assert_eq!(nb_of_added_files, count_files(temp_dir.path()));
-            // TODO(LinkZ): Check content
+            // Check content
+            let expected_content = thor_archive
+                .read_file_content(r"data\wav\se_subterranean_rustyengine.wav")
+                .unwrap();
+            let actual_content = fs::read(&expected_file_path).unwrap();
+            assert_eq!(expected_content, actual_content);
         }
     }
 
