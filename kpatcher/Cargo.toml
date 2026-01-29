@@ -3,6 +3,7 @@ name = "kpatcher"
 version = "1.2.0"
 authors = ["Lumen"]
 edition = "2021"
+license = "CC-BY-NC-4.0"
 build = "build.rs"
 description = "Kafra Patcher - A customizable patcher for Ragnarok Online"
 
@@ -10,6 +11,7 @@ description = "Kafra Patcher - A customizable patcher for Ragnarok Online"
 FileDescription = "Kafra Patcher - A customizable patcher for Ragnarok Online"
 ProductName = "Kafra Patcher"
 ProductVersion = "1.2.0"
+License = "CC-BY-NC-4.0"
 LegalCopyright = "Copyright © 2026 Kafra Patcher developers"
 
 

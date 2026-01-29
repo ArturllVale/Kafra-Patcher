@@ -1,7 +1,7 @@
 # Kafra Patcher
 
 [![Rust](https://github.com/ArturllVale/Kafra-Patcher/actions/workflows/rust.yml/badge.svg)](https://github.com/ArturllVale/Kafra-Patcher/actions/workflows/rust.yml)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
 [![Windows](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
 > Patcher customizável e multiplataforma para clientes Ragnarok Online, baseado no antigo projeto **rpatchur**.
@@ -28,17 +28,17 @@
 
 ## ✨ Funcionalidades
 
-| Recurso | Descrição |
-|---------|-----------|
+| Recurso                 | Descrição                                      |
+| ----------------------- | ---------------------------------------------- |
 | **UI Web Customizável** | Interface feita com HTML/CSS/JS - como um site |
-| **Configuração YAML** | Arquivo externo simples de configurar |
-| **HTTP/HTTPS** | Suporte a conexões seguras |
-| **Patches GRF** | Versões 0x101, 0x102, 0x103 e 0x200 |
-| **Formato THOR** | Compatível com Thor Patcher |
-| **SSO Login** | Funciona como launcher com autenticação |
-| **Patches Manuais** | Permite aplicar patches locais |
-| **Múltiplos Mirrors** | Redundância de servidores |
-| **Janela Customizada** | Sem bordas, transparente, arredondada |
+| **Configuração YAML**   | Arquivo externo simples de configurar          |
+| **HTTP/HTTPS**          | Suporte a conexões seguras                     |
+| **Patches GRF**         | Versões 0x101, 0x102, 0x103 e 0x200            |
+| **Formato THOR**        | Compatível com Thor Patcher                    |
+| **SSO Login**           | Funciona como launcher com autenticação        |
+| **Patches Manuais**     | Permite aplicar patches locais                 |
+| **Múltiplos Mirrors**   | Redundância de servidores                      |
+| **Janela Customizada**  | Sem bordas, transparente, arredondada          |
 
 ---
 
@@ -84,14 +84,14 @@ O arquivo `kpatcher.yml` deve estar na **mesma pasta** do executável. Aqui est�
 # CONFIGURAÇÃO DA JANELA
 # ═══════════════════════════════════════════════════════════════
 window:
-  title: Meu Servidor RO      # Título da janela
-  width: 780                   # Largura em pixels
-  height: 580                  # Altura em pixels
-  resizable: false             # Janela redimensionável?
-  
+  title: Meu Servidor RO # Título da janela
+  width: 780 # Largura em pixels
+  height: 580 # Altura em pixels
+  resizable: false # Janela redimensionável?
+
   # ─── Janela Customizada (Opcional) ───
-  frameless: true              # Remove bordas e barra de título
-  border_radius: 20            # Cantos arredondados (em pixels)
+  frameless: true # Remove bordas e barra de título
+  border_radius: 20 # Cantos arredondados (em pixels)
 
   # ─── Transparência da Janela (Opcional) ───
   # body {
@@ -102,19 +102,19 @@ window:
 # BOTÃO JOGAR
 # ═══════════════════════════════════════════════════════════════
 play:
-  path: ragexe.exe             # Executável do jogo
-  arguments: ["1sak1"]         # Argumentos (opcional)
-  exit_on_success: true        # Fechar patcher ao iniciar jogo?
-  play_with_error: false       # Habilitar botão Play se atualização falhar?
-  minimize_on_start: false     # Minimizar patcher ao iniciar jogo? (requer exit_on_success: false)
+  path: ragexe.exe # Executável do jogo
+  arguments: ["1sak1"] # Argumentos (opcional)
+  exit_on_success: true # Fechar patcher ao iniciar jogo?
+  play_with_error: false # Habilitar botão Play se atualização falhar?
+  minimize_on_start: false # Minimizar patcher ao iniciar jogo? (requer exit_on_success: false)
 
 # ═══════════════════════════════════════════════════════════════
 # BOTÃO CONFIGURAÇÕES
 # ═══════════════════════════════════════════════════════════════
 setup:
-  path: Setup.exe              # Executável de setup
-  arguments: []                # Argumentos (opcional)
-  exit_on_success: false       # Fechar patcher ao abrir setup?
+  path: Setup.exe # Executável de setup
+  arguments: [] # Argumentos (opcional)
+  exit_on_success: false # Fechar patcher ao abrir setup?
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIGURAÇÃO WEB E PATCHES
@@ -122,17 +122,17 @@ setup:
 web:
   # URL da página HTML (pode ser local ou remota)
   index_url: https://meuservidor.com/patcher/index.html
-  
+
   # Para testes locais, use:
   # index_url: file:///C:/MeuPatcher/index.html
-  
-  preferred_patch_server: Servidor Principal  # Servidor prioritário
-  
+
+  preferred_patch_server: Servidor Principal # Servidor prioritário
+
   patch_servers:
     - name: Servidor Principal
       plist_url: https://meuservidor.com/patcher/plist.txt
       patch_url: https://meuservidor.com/patcher/data/
-    
+
     - name: Servidor Backup
       plist_url: https://backup.meuservidor.com/plist.txt
       patch_url: https://backup.meuservidor.com/data/
@@ -141,15 +141,15 @@ web:
 # CONFIGURAÇÃO DO GRF
 # ═══════════════════════════════════════════════════════════════
 client:
-  default_grf_name: meuservidor.grf  # GRF principal para patches
+  default_grf_name: meuservidor.grf # GRF principal para patches
 
 # ═══════════════════════════════════════════════════════════════
 # OPÇÕES DE PATCHING
 # ═══════════════════════════════════════════════════════════════
 patching:
-  in_place: true         # Patchear GRF diretamente
-  check_integrity: true  # Verificar integridade dos downloads
-  create_grf: true       # Criar GRF se não existir
+  in_place: true # Patchear GRF diretamente
+  check_integrity: true # Verificar integridade dos downloads
+  create_grf: true # Criar GRF se não existir
 ```
 
 ---
@@ -162,39 +162,35 @@ O Kafra Patcher usa **HTML/CSS/JS** para a interface. Você pode criar qualquer 
 
 Use `external.invoke('comando')` no seu JavaScript/HTML para interagir com o patcher:
 
-| Comando | Descrição | Exemplo |
-|---------|-----------|---------|
-| `play` | Inicia o jogo | `onclick="external.invoke('play')"` |
-| `setup` | Abre configurações | `onclick="external.invoke('setup')"` |
-| `exit` | Fecha o patcher | `onclick="external.invoke('exit')"` |
-| `minimize` | Minimiza a janela | `onclick="external.invoke('minimize')"` |
-| `start_drag` | Inicia arraste da janela | `onmousedown="external.invoke('start_drag')"` |
-| `start_update` | Inicia atualização | `onclick="external.invoke('start_update')"` |
-| `cancel_update` | Cancela atualização | `onclick="external.invoke('cancel_update')"` |
-| `manual_patch` | Aplica patch manual | `onclick="external.invoke('manual_patch')"` |
-| `reset_cache` | Limpa cache | `onclick="external.invoke('reset_cache')"` |
+| Comando         | Descrição                | Exemplo                                       |
+| --------------- | ------------------------ | --------------------------------------------- |
+| `play`          | Inicia o jogo            | `onclick="external.invoke('play')"`           |
+| `setup`         | Abre configurações       | `onclick="external.invoke('setup')"`          |
+| `exit`          | Fecha o patcher          | `onclick="external.invoke('exit')"`           |
+| `minimize`      | Minimiza a janela        | `onclick="external.invoke('minimize')"`       |
+| `start_drag`    | Inicia arraste da janela | `onmousedown="external.invoke('start_drag')"` |
+| `start_update`  | Inicia atualização       | `onclick="external.invoke('start_update')"`   |
+| `cancel_update` | Cancela atualização      | `onclick="external.invoke('cancel_update')"`  |
+| `manual_patch`  | Aplica patch manual      | `onclick="external.invoke('manual_patch')"`   |
+| `reset_cache`   | Limpa cache              | `onclick="external.invoke('reset_cache')"`    |
 
 ### Exemplo: Botões Básicos
 
 ```html
 <!-- Botão Jogar -->
 <button onclick="external.invoke('play')" id="btn-play" disabled>
-    🎮 Jogar
+  🎮 Jogar
 </button>
 
 <!-- Botão Sair -->
-<button onclick="external.invoke('exit')" id="btn-exit">
-    ❌ Sair
-</button>
+<button onclick="external.invoke('exit')" id="btn-exit">❌ Sair</button>
 
 <!-- Botão Minimizar -->
-<button onclick="external.invoke('minimize')" id="btn-minimize">
-    ─
-</button>
+<button onclick="external.invoke('minimize')" id="btn-minimize">─</button>
 
 <!-- Botão Configurações -->
 <button onclick="external.invoke('setup')" id="btn-setup">
-    ⚙️ Configurações
+  ⚙️ Configurações
 </button>
 ```
 
@@ -202,13 +198,17 @@ Use `external.invoke('comando')` no seu JavaScript/HTML para interagir com o pat
 
 ```html
 <div class="dropdown">
-    <button class="dropdown-toggle">Opções</button>
-    <div class="dropdown-menu">
-        <a href="#" onclick="external.invoke('cancel_update')">❌ Cancelar Atualização</a>
-        <a href="#" onclick="external.invoke('start_update')">🔄 Reiniciar Atualização</a>
-        <a href="#" onclick="external.invoke('manual_patch')">📁 Patch Manual</a>
-        <a href="#" onclick="external.invoke('reset_cache')">🗑️ Limpar Cache</a>
-    </div>
+  <button class="dropdown-toggle">Opções</button>
+  <div class="dropdown-menu">
+    <a href="#" onclick="external.invoke('cancel_update')"
+      >❌ Cancelar Atualização</a
+    >
+    <a href="#" onclick="external.invoke('start_update')"
+      >🔄 Reiniciar Atualização</a
+    >
+    <a href="#" onclick="external.invoke('manual_patch')">📁 Patch Manual</a>
+    <a href="#" onclick="external.invoke('reset_cache')">🗑️ Limpar Cache</a>
+  </div>
 </div>
 ```
 
@@ -216,16 +216,18 @@ Use `external.invoke('comando')` no seu JavaScript/HTML para interagir com o pat
 
 ```html
 <button onclick="openUrl('https://meuservidor.com/register')">
-    📝 Criar Conta
+  📝 Criar Conta
 </button>
 
 <script>
-function openUrl(url) {
-    external.invoke(JSON.stringify({
-        function: 'open_url',
-        parameters: { 'url': url }
-    }));
-}
+  function openUrl(url) {
+    external.invoke(
+      JSON.stringify({
+        function: "open_url",
+        parameters: { url: url },
+      }),
+    );
+  }
 </script>
 ```
 
@@ -233,24 +235,26 @@ function openUrl(url) {
 
 ```html
 <form onsubmit="startGame(); return false;">
-    <input type="text" id="login" placeholder="Usuário" required>
-    <input type="password" id="password" placeholder="Senha" required>
-    <button type="submit">🔐 Conectar</button>
+  <input type="text" id="login" placeholder="Usuário" required />
+  <input type="password" id="password" placeholder="Senha" required />
+  <button type="submit">🔐 Conectar</button>
 </form>
 
 <script>
-function startGame() {
-    var login = document.getElementById('login').value;
-    var password = document.getElementById('password').value;
-    
-    external.invoke(JSON.stringify({
-        function: 'login',
+  function startGame() {
+    var login = document.getElementById("login").value;
+    var password = document.getElementById("password").value;
+
+    external.invoke(
+      JSON.stringify({
+        function: "login",
         parameters: {
-            'login': login,
-            'password': password
-        }
-    }));
-}
+          login: login,
+          password: password,
+        },
+      }),
+    );
+  }
 </script>
 ```
 
@@ -276,13 +280,13 @@ Use `start_drag` no `onmousedown` de qualquer elemento que você quer que sirva 
 ```html
 <!-- Barra de título arrastável -->
 <div class="title-bar" onmousedown="external.invoke('start_drag')">
-    <span>Meu Servidor RO</span>
-    <button onclick="external.invoke('minimize')">─</button>
-    <button onclick="external.invoke('exit')">✕</button>
+  <span>Meu Servidor RO</span>
+  <button onclick="external.invoke('minimize')">─</button>
+  <button onclick="external.invoke('exit')">✕</button>
 </div>
 
 <style>
-.title-bar {
+  .title-bar {
     background: #333;
     color: white;
     padding: 10px;
@@ -290,7 +294,7 @@ Use `start_drag` no `onmousedown` de qualquer elemento que você quer que sirva 
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
+  }
 </style>
 ```
 
@@ -305,26 +309,25 @@ window:
 
 Então no seu CSS, use essa cor como fundo:
 
-```css
-```css
-body {
-    background: transparent;
-    margin: 0;
-    padding: 0;
+````css
+```css body {
+  background: transparent;
+  margin: 0;
+  padding: 0;
 }
 
 .patcher-content {
-    background: url('meu-background.png') no-repeat;
-    /* OU use um gradiente, cor sólida, etc */
+  background: url("meu-background.png") no-repeat;
+  /* OU use um gradiente, cor sólida, etc */
 }
-```
+````
 
 ### Cantos Arredondados
 
 ```yaml
 window:
   frameless: true
-  border_radius: 20  # Raio em pixels
+  border_radius: 20 # Raio em pixels
 ```
 
 ### Exemplo Completo: Janela Customizada
@@ -341,59 +344,69 @@ window:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: transparent; }
+  <head>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: transparent;
+      }
 
-.window {
-    width: 800px;
-    height: 600px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 15px;
-    overflow: hidden;
-}
+      .window {
+        width: 800px;
+        height: 600px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border-radius: 15px;
+        overflow: hidden;
+      }
 
-.titlebar {
-    height: 40px;
-    background: rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 15px;
-    cursor: move;
-}
+      .titlebar {
+        height: 40px;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+        cursor: move;
+      }
 
-.titlebar button {
-    border: none;
-    background: none;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 5px 10px;
-}
+      .titlebar button {
+        border: none;
+        background: none;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 5px 10px;
+      }
 
-.titlebar button:hover { background: rgba(255,255,255,0.1); }
-.close-btn:hover { background: #e74c3c !important; }
-</style>
-</head>
+      .titlebar button:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .close-btn:hover {
+        background: #e74c3c !important;
+      }
+    </style>
+  </head>
 
-<body>
-<div class="window">
-    <div class="titlebar" onmousedown="external.invoke('start_drag')">
+  <body>
+    <div class="window">
+      <div class="titlebar" onmousedown="external.invoke('start_drag')">
         <span style="color: white;">Meu Servidor RO</span>
         <div>
-            <button onclick="external.invoke('minimize')">─</button>
-            <button class="close-btn" onclick="external.invoke('exit')">✕</button>
+          <button onclick="external.invoke('minimize')">─</button>
+          <button class="close-btn" onclick="external.invoke('exit')">✕</button>
         </div>
-    </div>
-    
-    <!-- Conteúdo do patcher -->
-    <div class="content">
+      </div>
+
+      <!-- Conteúdo do patcher -->
+      <div class="content">
         <!-- ... -->
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>
 ```
 
@@ -434,12 +447,12 @@ hotfix_001.thor
 
 ### Formatos de Patch Suportados
 
-| Formato | Descrição | Recomendado |
-|---------|-----------|-------------|
-| `.grf` | Formato Padrão | ⭐ Sim |
-| `.thor` | Formato Thor Patcher (legado) | ⭐ Sim |
-| `.rgz` | GRF comprimido (Gzip) | ⭐ Sim |
-| `.gpf` | GRF Patch File | ⭐ Sim |
+| Formato | Descrição                     | Recomendado |
+| ------- | ----------------------------- | ----------- |
+| `.grf`  | Formato Padrão                | ⭐ Sim      |
+| `.thor` | Formato Thor Patcher (legado) | ⭐ Sim      |
+| `.rgz`  | GRF comprimido (Gzip)         | ⭐ Sim      |
+| `.gpf`  | GRF Patch File                | ⭐ Sim      |
 
 ---
 
@@ -448,17 +461,19 @@ hotfix_001.thor
 O patcher chama automaticamente estas funções do seu JavaScript para informar o progresso:
 
 ### patchingStatusReady()
+
 Chamada quando o jogo está pronto para jogar.
 
 ```javascript
 function patchingStatusReady() {
-    document.getElementById('btn-play').disabled = false;
-    document.getElementById('progress-text').textContent = 'Pronto!';
-    document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById("btn-play").disabled = false;
+  document.getElementById("progress-text").textContent = "Pronto!";
+  document.getElementById("progress-bar").style.width = "100%";
 }
 ```
 
 ### patchingStatusError(errorMsg, playWithError)
+
 Chamada quando ocorre um erro na atualização.
 
 - `errorMsg`: Mensagem de erro
@@ -466,78 +481,91 @@ Chamada quando ocorre um erro na atualização.
 
 ```javascript
 function patchingStatusError(errorMsg, playWithError) {
-    document.getElementById('progress-text').textContent = 'Erro: ' + errorMsg;
-    document.getElementById('progress-bar').classList.add('error');
-    
-    // Se configurado, habilita o botão Play mesmo com erro
-    if (playWithError) {
-        document.getElementById('btn-play').disabled = false;
-    }
+  document.getElementById("progress-text").textContent = "Erro: " + errorMsg;
+  document.getElementById("progress-bar").classList.add("error");
+
+  // Se configurado, habilita o botão Play mesmo com erro
+  if (playWithError) {
+    document.getElementById("btn-play").disabled = false;
+  }
 }
 ```
 
 ### patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec)
+
 Chamada durante o download.
 
 ```javascript
 function patchingStatusDownloading(nbDownloaded, nbTotal, bytesPerSec) {
-    var percent = (100 * nbDownloaded) / nbTotal;
-    var speed = humanFileSize(bytesPerSec) + '/s';
-    
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-text').textContent = 
-        'Baixando: ' + nbDownloaded + '/' + nbTotal + ' - ' + speed;
+  var percent = (100 * nbDownloaded) / nbTotal;
+  var speed = humanFileSize(bytesPerSec) + "/s";
+
+  document.getElementById("progress-bar").style.width = percent + "%";
+  document.getElementById("progress-text").textContent =
+    "Baixando: " + nbDownloaded + "/" + nbTotal + " - " + speed;
 }
 
 function humanFileSize(bytes) {
-    var i = bytes == 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
-    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
+  var i = bytes == 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+  return (
+    (bytes / Math.pow(1024, i)).toFixed(2) + " " + ["B", "KB", "MB", "GB"][i]
+  );
 }
 ```
 
 ### patchingStatusInstalling(nbInstalled, nbTotal)
+
 Chamada durante a instalação dos patches.
 
 ```javascript
 function patchingStatusInstalling(nbInstalled, nbTotal) {
-    var percent = (100 * nbInstalled) / nbTotal;
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-text').textContent = 
-        'Instalando: ' + nbInstalled + '/' + nbTotal;
+  var percent = (100 * nbInstalled) / nbTotal;
+  document.getElementById("progress-bar").style.width = percent + "%";
+  document.getElementById("progress-text").textContent =
+    "Instalando: " + nbInstalled + "/" + nbTotal;
 }
 ```
 
 ### patchingStatusPatchApplied(fileName)
+
 Chamada quando um patch manual é aplicado.
 
 ```javascript
 function patchingStatusPatchApplied(fileName) {
-    alert('Patch aplicado com sucesso: ' + fileName);
+  alert("Patch aplicado com sucesso: " + fileName);
 }
 ```
 
 ### notificationInProgress()
+
 Chamada quando já existe uma atualização em andamento.
 
 ```javascript
 function notificationInProgress() {
-    alert('Já existe uma atualização em andamento!');
+  alert("Já existe uma atualização em andamento!");
 }
 ```
 
 ### mediaPause() / mediaResume()
+
 Chamadas automaticamente quando a janela é minimizada/restaurada. Use para controlar BGM/vídeos.
 
 ```javascript
 function mediaPause() {
-    document.querySelectorAll('audio, video').forEach(function(el) {
-        if (!el.paused) { el.dataset.wasPlaying = 'true'; el.pause(); }
-    });
+  document.querySelectorAll("audio, video").forEach(function (el) {
+    if (!el.paused) {
+      el.dataset.wasPlaying = "true";
+      el.pause();
+    }
+  });
 }
 function mediaResume() {
-    document.querySelectorAll('audio, video').forEach(function(el) {
-        if (el.dataset.wasPlaying === 'true') { el.play(); el.dataset.wasPlaying = ''; }
-    });
+  document.querySelectorAll("audio, video").forEach(function (el) {
+    if (el.dataset.wasPlaying === "true") {
+      el.play();
+      el.dataset.wasPlaying = "";
+    }
+  });
 }
 ```
 
@@ -547,13 +575,13 @@ function mediaResume() {
 <audio id="bgm" src="music/theme.mp3" autoplay loop controls></audio>
 
 <script>
-// Volume persistence via localStorage
-var bgm = document.getElementById('bgm');
-var savedVol = localStorage.getItem('bgmVolume');
-if (savedVol !== null) bgm.volume = parseFloat(savedVol);
-bgm.addEventListener('volumechange', function() {
-    localStorage.setItem('bgmVolume', bgm.volume);
-});
+  // Volume persistence via localStorage
+  var bgm = document.getElementById("bgm");
+  var savedVol = localStorage.getItem("bgmVolume");
+  if (savedVol !== null) bgm.volume = parseFloat(savedVol);
+  bgm.addEventListener("volumechange", function () {
+    localStorage.setItem("bgmVolume", bgm.volume);
+  });
 </script>
 ```
 
@@ -596,18 +624,16 @@ rustup target add i686-pc-windows-msvc
 cargo build --target=i686-pc-windows-msvc --release
 ```
 
-
-
 ## 📂 Exemplos
 
 A pasta `examples/` contém exemplos prontos para uso:
 
-| Exemplo | Descrição |
-|---------|-----------|
-| `bootstrap/` | UI completa com Bootstrap, barra de progresso e notificações |
-| `basic_launcher/` | Launcher simples com login SSO |
-| `kpatcher.yml` | Configuração de exemplo completa |
-| `patch.yml` | Configuração de patch de exemplo |
+| Exemplo           | Descrição                                                    |
+| ----------------- | ------------------------------------------------------------ |
+| `bootstrap/`      | UI completa com Bootstrap, barra de progresso e notificações |
+| `basic_launcher/` | Launcher simples com login SSO                               |
+| `kpatcher.yml`    | Configuração de exemplo completa                             |
+| `patch.yml`       | Configuração de patch de exemplo                             |
 
 Para usar um exemplo:
 
@@ -621,7 +647,8 @@ Para usar um exemplo:
 ## 📜 Licença
 
 Copyright (c) 2020-2026 Kafra Patcher developers
+
 - Desenvolvido por: **L1nkZ** / Antigo **rpatchur**
 - Mantenedor: **Lumen#0110** / Atual **Kafra Patcher**
 
-Distribuído sob licença [MIT](LICENSE-MIT) / [Apache-2.0](LICENSE-APACHE).
+Distribuído sob licença [CC BY-NC 4.0](LICENSE).
