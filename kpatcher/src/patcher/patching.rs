@@ -76,7 +76,10 @@ fn apply_grf_to_grf_ip(
     source_grf: &mut GrfArchive,
 ) -> Result<()> {
     let mut builder = GrfArchiveBuilder::open(target_grf_path)?;
-    let entries: Vec<String> = source_grf.get_entries().map(|e| e.relative_path.clone()).collect();
+    let entries: Vec<String> = source_grf
+        .get_entries()
+        .map(|e| e.relative_path.clone())
+        .collect();
     for path in entries {
         builder.import_raw_entry_from_grf(source_grf, path)?;
     }
@@ -94,10 +97,13 @@ fn apply_grf_to_grf_oop(
 
     // Prepare file entries that'll be used to make the patched GRF
     let mut merge_entries: HashMap<String, MergeEntry> = HashMap::new();
-    
+
     // Add files from the original archive
     let mut target_archive = GrfArchive::open(&backup_file_path)?;
-    let (_major, _minor) = (target_archive.version_major(), target_archive.version_minor());
+    let (_major, _minor) = (
+        target_archive.version_major(),
+        target_archive.version_minor(),
+    );
 
     for entry in target_archive.get_entries() {
         // If file exists in patch, skip it (it will be overwritten)
@@ -114,7 +120,7 @@ fn apply_grf_to_grf_oop(
             },
         );
     }
-    
+
     // Add files from the patch
     for entry in source_grf.get_entries() {
         merge_entries.insert(
@@ -259,7 +265,8 @@ pub fn apply_patch_to_disk<R: Read + Seek>(
         .collect();
     file_entries.sort_unstable_by(|a, b| a.offset.cmp(&b.offset));
     for entry in file_entries {
-        let mut dest_path = join_windows_relative_path(root_directory.as_ref(), &entry.relative_path);
+        let mut dest_path =
+            join_windows_relative_path(root_directory.as_ref(), &entry.relative_path);
         if let Ok(current_exe) = env::current_exe() {
             if dest_path == current_exe {
                 dest_path = dest_path.with_extension("exe.new");

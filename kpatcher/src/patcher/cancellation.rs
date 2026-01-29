@@ -12,9 +12,7 @@ pub async fn wait_for_cancellation(
 ) -> InterruptibleFnError {
     if let Ok(cmd) = patching_thread_rx.recv_async().await {
         match cmd {
-            PatcherCommand::CancelUpdate => {
-                InterruptibleFnError::Interrupted
-            }
+            PatcherCommand::CancelUpdate => InterruptibleFnError::Interrupted,
             _ => InterruptibleFnError::Err("Unexpected command received".to_string()),
         }
     } else {
@@ -27,9 +25,7 @@ pub fn process_incoming_commands(
 ) -> InterruptibleFnResult<()> {
     match patching_thread_rx.try_recv() {
         Ok(cmd) => match cmd {
-            PatcherCommand::CancelUpdate => {
-                Err(InterruptibleFnError::Interrupted)
-            }
+            PatcherCommand::CancelUpdate => Err(InterruptibleFnError::Interrupted),
             _ => Ok(()),
         },
         Err(e) => match e {
