@@ -38,6 +38,7 @@ pub struct PlayConfiguration {
     pub arguments: Vec<String>,
     pub exit_on_success: Option<bool>,
     pub play_with_error: Option<bool>,
+    pub minimize_on_start: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]

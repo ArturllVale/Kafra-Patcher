@@ -106,6 +106,7 @@ play:
   arguments: ["1sak1"]         # Argumentos (opcional)
   exit_on_success: true        # Fechar patcher ao iniciar jogo?
   play_with_error: false       # Habilitar botão Play se atualização falhar?
+  minimize_on_start: false     # Minimizar patcher ao iniciar jogo? (requer exit_on_success: false)
 
 # ═══════════════════════════════════════════════════════════════
 # BOTÃO CONFIGURAÇÕES
@@ -522,6 +523,38 @@ Chamada quando já existe uma atualização em andamento.
 function notificationInProgress() {
     alert('Já existe uma atualização em andamento!');
 }
+```
+
+### mediaPause() / mediaResume()
+Chamadas automaticamente quando a janela é minimizada/restaurada. Use para controlar BGM/vídeos.
+
+```javascript
+function mediaPause() {
+    document.querySelectorAll('audio, video').forEach(function(el) {
+        if (!el.paused) { el.dataset.wasPlaying = 'true'; el.pause(); }
+    });
+}
+function mediaResume() {
+    document.querySelectorAll('audio, video').forEach(function(el) {
+        if (el.dataset.wasPlaying === 'true') { el.play(); el.dataset.wasPlaying = ''; }
+    });
+}
+```
+
+### Exemplo: BGM com Volume Persistente
+
+```html
+<audio id="bgm" src="music/theme.mp3" autoplay loop controls></audio>
+
+<script>
+// Volume persistence via localStorage
+var bgm = document.getElementById('bgm');
+var savedVol = localStorage.getItem('bgmVolume');
+if (savedVol !== null) bgm.volume = parseFloat(savedVol);
+bgm.addEventListener('volumechange', function() {
+    localStorage.setItem('bgmVolume', bgm.volume);
+});
+</script>
 ```
 
 ---

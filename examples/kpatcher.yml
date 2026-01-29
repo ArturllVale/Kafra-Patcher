@@ -30,6 +30,7 @@ play:
   arguments: ["1sak1"]    # Argumentos de linha de comando passados ao executável
   exit_on_success: false  # (Opcional) Fecha o patcher quando o jogo iniciar. Padrão: true
   play_with_error: false  # (Opcional) Habilita o botão Play mesmo se a atualização falhar. Padrão: false
+  minimize_on_start: true # (Opcional) Minimiza o patcher quando o jogo iniciar. Requer exit_on_success: false
 
 # Configuração do botão Setup
 setup:

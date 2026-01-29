@@ -42,6 +42,9 @@
 </head>
 
 <body>
+    <!-- BGM Example: uncomment and update src to enable background music
+    <audio id="bgm" src="music/theme.mp3" autoplay loop controls style="position:fixed;bottom:10px;left:10px;width:200px;z-index:9999;opacity:0.8;"></audio>
+    -->
     <!-- Patcher status callbacks -->
     <script type="text/javascript">
         $(document).ready(function () {
@@ -118,6 +121,30 @@
             var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
             return (size / Math.pow(1024, i)).toFixed(2) * 1 + ' ' + ['B', 'kiB', 'MiB', 'GiB', 'TiB'][i];
         }
+
+        // BGM Control - pause/resume on minimize/restore
+        function mediaPause() {
+            document.querySelectorAll('audio, video').forEach(function (el) {
+                if (!el.paused) { el.dataset.wasPlaying = 'true'; el.pause(); }
+            });
+        }
+        function mediaResume() {
+            document.querySelectorAll('audio, video').forEach(function (el) {
+                if (el.dataset.wasPlaying === 'true') { el.play(); el.dataset.wasPlaying = ''; }
+            });
+        }
+
+        // BGM Volume persistence
+        $(document).ready(function () {
+            var bgm = document.getElementById('bgm');
+            if (bgm) {
+                var savedVol = localStorage.getItem('bgmVolume');
+                if (savedVol !== null) bgm.volume = parseFloat(savedVol);
+                bgm.addEventListener('volumechange', function () {
+                    localStorage.setItem('bgmVolume', bgm.volume);
+                });
+            }
+        });
     </script>
 
     <!-- Top Navbar -->

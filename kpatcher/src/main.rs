@@ -163,6 +163,17 @@ fn main() -> Result<()> {
                 ui::save_window_position(webview.window());
                 *control_flow = ControlFlow::Exit;
             }
+            Event::WindowEvent {
+                event: WindowEvent::Focused(focused),
+                ..
+            } => {
+                let script = if focused {
+                    "if(typeof mediaResume==='function')mediaResume();"
+                } else {
+                    "if(typeof mediaPause==='function')mediaPause();"
+                };
+                let _ = webview.evaluate_script(script);
+            }
             _ => (),
         }
     });

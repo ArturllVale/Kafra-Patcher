@@ -137,6 +137,8 @@ pub fn build_webview(
                 start_game_client(&ipc_config, &args);
                 if ipc_config.play.exit_on_success.unwrap_or(true) {
                     let _ = ipc_proxy.send_event(UiEvent::Exit);
+                } else if ipc_config.play.minimize_on_start.unwrap_or(false) {
+                    window.set_minimized(true);
                 }
             }
             "setup" => {
