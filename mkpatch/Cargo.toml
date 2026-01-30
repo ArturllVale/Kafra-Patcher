@@ -22,6 +22,8 @@ wry = "0.24"
 tao = "0.16"
 tinyfiledialogs = { version = "3.3", default-features = false }
 flate2 = "1.0"
+aes-gcm = "0.10"
+rand = "0.8"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"

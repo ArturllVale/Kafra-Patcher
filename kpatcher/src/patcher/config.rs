@@ -7,9 +7,17 @@ use super::get_patcher_name;
 use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
 use serde::Deserialize;
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce // Or `Key`
+};
 
 /// Marcador para identificar config embutido no final do EXE
 const CONFIG_MARKER: &[u8; 4] = b"KCFG";
+
+/// Chave de criptografia compartilhada (32 bytes)
+/// IMPORTANTE: Manter sincronizado com mkpatch/src/embed.rs
+const ENCRYPTION_KEY: &[u8; 32] = b"kpatcher_secret_key_32_bytes!!!!";
 
 #[derive(Deserialize, Clone)]
 pub struct PatcherConfiguration {
@@ -113,21 +121,34 @@ fn extract_embedded_config() -> Result<PatcherConfiguration> {
         anyhow::bail!("No embedded config marker found");
     }
 
-    // Extrair tamanho do config comprimido
-    let compressed_size = u32::from_le_bytes([footer[0], footer[1], footer[2], footer[3]]) as u64;
+    // Tamanho total do bundle (Nonce + Ciphertext)
+    let bundle_size = u32::from_le_bytes([footer[0], footer[1], footer[2], footer[3]]) as u64;
 
     // Validar tamanho
-    if compressed_size == 0 || compressed_size > file_size - 8 {
+    if bundle_size == 0 || bundle_size > file_size - 8 {
         anyhow::bail!("Invalid embedded config size");
     }
 
-    // Posicionar no início do config comprimido
-    let config_start = file_size - 8 - compressed_size;
-    file.seek(SeekFrom::Start(config_start))?;
+    // Posicionar no início do bundle
+    let bundle_start = file_size - 8 - bundle_size;
+    file.seek(SeekFrom::Start(bundle_start))?;
 
-    // Ler o config comprimido
-    let mut compressed_data = vec![0u8; compressed_size as usize];
-    file.read_exact(&mut compressed_data)?;
+    // Ler o bundle completo
+    let mut bundle_data = vec![0u8; bundle_size as usize];
+    file.read_exact(&mut bundle_data)?;
+
+    if bundle_data.len() < 12 {
+        anyhow::bail!("Embedded config too short to contain nonce");
+    }
+
+    // Separar Nonce e Ciphertext
+    let (nonce_bytes, ciphertext) = bundle_data.split_at(12);
+    let nonce = Nonce::from_slice(nonce_bytes);
+
+    // Descriptografar
+    let cipher = Aes256Gcm::new(ENCRYPTION_KEY.into());
+    let compressed_data = cipher.decrypt(nonce, ciphertext)
+        .map_err(|e| anyhow::anyhow!("Failed to decrypt embedded config: {}", e))?;
 
     // Descomprimir
     let mut decoder = GzDecoder::new(&compressed_data[..]);

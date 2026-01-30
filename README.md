@@ -61,7 +61,13 @@
 
 ## 🔒 Protegendo sua Configuração (Embed Config)
 
-Por segurança, você pode **embutir** o arquivo `kpatcher.yml` dentro do executável `KPatcher.exe`. Isso oculta as URLs do seu servidor e evita que usuários editem a configuração.
+Por segurança, você pode **embutir** o arquivo `kpatcher.yml` dentro do executável `KPatcher.exe`.
+
+O conteúdo é **comprimido e criptografado (AES-256)**, o que:
+
+1. Oculta as URLs do seu servidor.
+2. Evita que usuários editem a configuração.
+3. Dificulta a engenharia reversa e extração de dados sensíveis.
 
 O utilitário `mkpatch.exe` possui uma interface gráfica para isso:
 
