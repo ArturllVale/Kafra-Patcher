@@ -42,12 +42,10 @@ pub fn run_ui() {
             let _ = handler_proxy.send_event(UiEvent::SelectExe);
         } else if req == "select_yml" {
             let _ = handler_proxy.send_event(UiEvent::SelectYml);
-        } else if req.starts_with("generate:") {
-            let json_str = req[9..].to_string();
-            let _ = handler_proxy.send_event(UiEvent::Generate(json_str));
-        } else if req.starts_with("embed:") {
-            let json_str = req[6..].to_string();
-            let _ = handler_proxy.send_event(UiEvent::Embed(json_str));
+        } else if let Some(json_str) = req.strip_prefix("generate:") {
+            let _ = handler_proxy.send_event(UiEvent::Generate(json_str.to_string()));
+        } else if let Some(json_str) = req.strip_prefix("embed:") {
+            let _ = handler_proxy.send_event(UiEvent::Embed(json_str.to_string()));
         }
     };
 

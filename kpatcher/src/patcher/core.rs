@@ -79,7 +79,6 @@ async fn update_game(
         Err(err) => {
             log::error!("{:#}", err);
             ui_controller.dispatch_patching_status(PatchingStatus::Error(format!("{:#}", err)));
-            return;
         }
         Ok(lock_file) => {
             // Tell the UI and other processes that we're currently working
@@ -229,13 +228,15 @@ async fn interruptible_update_routine(
     let tmp_dir = tempfile::tempdir().with_context(|| "Failed to create temporary directory")?;
     let concurrent_downloads = config.patching.concurrent_downloads.unwrap_or(8);
     let pending_patch_queue = download_patches_concurrent(
-        &client,
-        patch_url,
-        patch_list,
-        tmp_dir.path(),
-        config.patching.check_integrity,
-        concurrent_downloads,
-        ui_controller,
+        DownloadParams {
+            client: &client,
+            patch_url,
+            patch_list,
+            download_directory: tmp_dir.path(),
+            ensure_integrity: config.patching.check_integrity,
+            concurrent_downloads,
+            ui_controller,
+        },
         patcher_thread_rx,
     )
     .await
@@ -385,21 +386,17 @@ fn get_instance_asset_file_name(extension: impl AsRef<std::ffi::OsStr>) -> Resul
 ///
 /// This function is interruptible.
 async fn download_patches_concurrent(
-    client: &reqwest::Client,
-    patch_url: Url,
-    patch_list: ThorPatchList,
-    download_directory: impl AsRef<Path>,
-    ensure_integrity: bool,
-    concurrent_downloads: usize,
-    ui_controller: &UiController,
+    params: DownloadParams<'_, impl AsRef<Path>>,
     patching_thread_rx: &mut flume::Receiver<PatcherCommand>,
 ) -> InterruptibleFnResult<Vec<PendingPatch>> {
-    let patch_count = patch_list.len();
-    ui_controller.dispatch_patching_status(PatchingStatus::DownloadInProgress(0, patch_count, 0));
+    let patch_count = params.patch_list.len();
+    params
+        .ui_controller
+        .dispatch_patching_status(PatchingStatus::DownloadInProgress(0, patch_count, 0));
     // Download files in a cancelable manner
     let mut vec = tokio::select! {
         cancel_res = wait_for_cancellation(patching_thread_rx) => return Err(cancel_res),
-        download_res = download_patches_concurrent_inner(client, patch_url, patch_list, download_directory, ensure_integrity, concurrent_downloads, ui_controller) => {
+        download_res = download_patches_concurrent_inner(params) => {
             download_res.map_err(|e| InterruptibleFnError::Err(format!("{:#}", e)))
         },
     }?;
@@ -408,18 +405,31 @@ async fn download_patches_concurrent(
     Ok(vec)
 }
 
+struct DownloadParams<'a, P> {
+    client: &'a reqwest::Client,
+    patch_url: Url,
+    patch_list: ThorPatchList,
+    download_directory: P,
+    ensure_integrity: bool,
+    concurrent_downloads: usize,
+    ui_controller: &'a UiController,
+}
+
 /// Actual implementation of the concurrent file download
 ///
 /// Returns an unordered vector of `PendingPatch`.
-async fn download_patches_concurrent_inner(
-    client: &reqwest::Client,
-    patch_url: Url,
-    patch_list: ThorPatchList,
-    download_directory: impl AsRef<Path>,
-    ensure_integrity: bool,
-    concurrent_downloads: usize,
-    ui_controller: &UiController,
+async fn download_patches_concurrent_inner<P: AsRef<Path>>(
+    params: DownloadParams<'_, P>,
 ) -> Result<Vec<PendingPatch>> {
+    let DownloadParams {
+        client,
+        patch_url,
+        patch_list,
+        download_directory,
+        ensure_integrity,
+        concurrent_downloads,
+        ui_controller,
+    } = params;
     const ONE_SECOND: Duration = Duration::from_secs(1);
     // Shared value that contains the number of downloaded patches
     let shared_patch_number = AtomicUsize::new(0_usize);
@@ -527,10 +537,7 @@ fn is_archive_valid(archive_path: impl AsRef<Path>) -> Result<bool> {
                 Ok(true)
             } else {
                 // Only consider this an error if the integrity file was found
-                Err(anyhow!(
-                    "Archive's integrity file is invalid: {}",
-                    e.to_string(),
-                ))
+                Err(anyhow!("Archive's integrity file is invalid: {}", e,))
             }
         }
         Ok(v) => Ok(v),
