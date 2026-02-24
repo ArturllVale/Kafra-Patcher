@@ -604,9 +604,25 @@ async fn apply_patches(
 
         let patch_name = pending_patch.info.file_name;
         log::info!("Processing {}", patch_name);
-        apply_patch(pending_patch.local_file_path, config, &current_working_dir).map_err(|e| {
+
+        let patch_file_path = pending_patch.local_file_path;
+        let config_clone = config.clone();
+        let current_working_dir_clone = current_working_dir.clone();
+
+        tokio::task::spawn_blocking(move || {
+            apply_patch(patch_file_path, &config_clone, &current_working_dir_clone)
+        })
+        .await
+        .map_err(|e| {
+            InterruptibleFnError::Err(format!(
+                "Failed to join patching task for '{}': {}.",
+                patch_name, e
+            ))
+        })?
+        .map_err(|e| {
             InterruptibleFnError::Err(format!("Failed to apply patch '{}': {}.", patch_name, e))
         })?;
+
         // Update the cache file with the last successful patch's index
         if let Err(e) = write_cache_file(
             &cache_file_path,
@@ -809,5 +825,124 @@ mod tests {
         assert_eq!(data_size, file_content.len());
         // Content check
         assert_eq!(body_content, file_content);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_apply_patch_blocking_simulation() {
+        use super::super::config::*;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let thor_dir_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/tests/thor");
+        let patch_path = thor_dir_path.join("small.thor");
+
+        println!("Patch path: {:?}", patch_path);
+        assert!(patch_path.exists(), "Patch file does not exist at {:?}", patch_path);
+
+        let config = PatcherConfiguration {
+            window: WindowConfiguration {
+                title: "Test".to_string(),
+                width: 800,
+                height: 600,
+                resizable: false,
+                frameless: None,
+                border_radius: None,
+            },
+            play: PlayConfiguration {
+                path: "client.exe".to_string(),
+                arguments: vec![],
+                exit_on_success: None,
+                play_with_error: None,
+                minimize_on_start: None,
+            },
+            setup: SetupConfiguration {
+                path: "setup.exe".to_string(),
+                arguments: vec![],
+                exit_on_success: None,
+            },
+            web: WebConfiguration {
+                index_url: "http://localhost".to_string(),
+                preferred_patch_server: None,
+                patch_servers: vec![],
+            },
+            client: ClientConfiguration {
+                default_grf_name: "data.grf".to_string(),
+            },
+            patching: PatchingConfiguration {
+                in_place: false,
+                check_integrity: false,
+                create_grf: true,
+                concurrent_downloads: None,
+            },
+        };
+
+        // 1. Baseline: Sync call blocks everything
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let ticker = tokio::spawn(async move {
+            let mut ticks = 0;
+            loop {
+                ticks += 1;
+                if tx.send(ticks).is_err() {
+                    break;
+                }
+                tokio::task::yield_now().await;
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+        });
+
+        let start = Instant::now();
+        for _ in 0..50 {
+            apply_patch(&patch_path, &config, temp_dir.path()).unwrap();
+        }
+        let duration_sync = start.elapsed();
+        ticker.abort();
+
+        let mut ticks_sync = 0;
+        while rx.try_recv().is_ok() {
+            ticks_sync += 1;
+        }
+
+        println!("Sync Duration: {:?}, Ticks: {}", duration_sync, ticks_sync);
+
+        // 2. Fix Simulation: spawn_blocking
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let ticker = tokio::spawn(async move {
+            let mut ticks = 0;
+            loop {
+                ticks += 1;
+                if tx.send(ticks).is_err() {
+                    break;
+                }
+                tokio::task::yield_now().await;
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+        });
+
+        let start = Instant::now();
+        for _ in 0..50 {
+            let patch_path = patch_path.clone();
+            let config = config.clone();
+            let path = temp_dir.path().to_path_buf();
+            tokio::task::spawn_blocking(move || apply_patch(patch_path, &config, path))
+                .await
+                .unwrap()
+                .unwrap();
+        }
+        let duration_async = start.elapsed();
+        ticker.abort();
+
+        let mut ticks_async = 0;
+        while rx.try_recv().is_ok() {
+            ticks_async += 1;
+        }
+
+        println!("Async Duration: {:?}, Ticks: {}", duration_async, ticks_async);
+
+        // Assertions
+        // Sync ticks should be close to 0 (only what ran before/after loop)
+        // Async ticks should be significantly higher because we yielded
+        assert!(
+            ticks_async > ticks_sync,
+            "Async implementation should allow more ticks"
+        );
     }
 }
