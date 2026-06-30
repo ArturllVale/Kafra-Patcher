@@ -687,30 +687,24 @@ fn apply_patch(
         apply_rgz_to_disk(current_working_dir, rgz_archive)
     } else if extension == "gpf" || extension == "grf" {
         // Handle GRF/GPF (Gzipped GRF or regular GRF)
-        let file = fs::File::open(patch_path)?;
 
-        // Decompress to a temporary GRF file if needed
-        let temp_dir = tempfile::tempdir()?;
-        let temp_grf_path = temp_dir.path().join("patch_temp.grf");
-
-        if extension == "grf" {
-            // Regular GRF, no decompression needed
-            // Copy to temp file to ensure we don't lock source if needed?
-            // Or just use directly. But apply_grf_to_grf takes a path.
-            // If we use source path directly, we might need write access if InPlace, but here we are reading FROM it.
-            // apply_grf_to_grf uses `source_grf` which is `&mut GrfArchive`.
-            // Let's just copy it to be safe and consistent with RGZ/GPF flow,
-            // although for performance avoiding copy would be better.
-            fs::copy(patch_path, &temp_grf_path)?;
+        // Open the GRF, decompressing GPF to a temporary GRF file if needed
+        let mut _temp_dir_opt = None;
+        let mut source_grf = if extension == "grf" {
+            // Regular GRF, no decompression needed, read directly to avoid copy overhead
+            GrfArchive::open(patch_path)?
         } else {
             // GPF, decompress
+            let file = fs::File::open(patch_path)?;
+            let temp_dir = tempfile::tempdir()?;
+            let temp_grf_path = temp_dir.path().join("patch_temp.grf");
             let mut decoder = GzDecoder::new(file);
             let mut temp_grf_file = fs::File::create(&temp_grf_path)?;
             std::io::copy(&mut decoder, &mut temp_grf_file)?;
-        }
-
-        // Open the (decompressed or copied) GRF
-        let mut source_grf = GrfArchive::open(&temp_grf_path)?;
+            let archive = GrfArchive::open(&temp_grf_path)?;
+            _temp_dir_opt = Some(temp_dir);
+            archive
+        };
 
         // Target GRF (use default from config)
         let target_grf_name = &config.client.default_grf_name;
