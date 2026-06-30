@@ -793,17 +793,13 @@ fn verify_grf_integrity(grf_path: impl AsRef<Path>) -> Result<()> {
     // Verificar amostra de arquivos para não demorar muito em GRFs grandes
     let sample_size = 10;
     // Verificar se podemos ler as entradas do arquivo (apenas uma amostra)
-    let entries: Vec<_> = grf_archive
-        .get_entries()
-        .take(sample_size)
-        .cloned()
-        .collect();
+    let entries: Vec<_> = grf_archive.take_entries().take(sample_size).collect();
 
-    for entry in entries {
+    for entry in &entries {
         // Tentar ler o conteúdo do arquivo
         if entry.size > 0 {
             grf_archive
-                .read_file_content(&entry.relative_path)
+                .read_file_content_by_entry(entry)
                 .with_context(|| {
                     format!(
                         "Falha ao ler arquivo '{}' do GRF durante verificação de integridade",
