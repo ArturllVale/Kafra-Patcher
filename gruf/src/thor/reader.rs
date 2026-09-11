@@ -431,7 +431,7 @@ named!(parse_multiple_files_entry<&[u8], ThorFileEntry>,
 
 named!(parse_multiple_files_entries<&[u8], HashSet<ThorFileEntry>>,
     fold_many1!(parse_multiple_files_entry, HashSet::new(), |mut acc: HashSet<_>, item| {
-        acc.insert(item);
+        acc.replace(item);
         acc
     })
 );
@@ -634,5 +634,33 @@ mod tests {
             assert!(thor_archive.use_grf_merging());
             assert!(thor_archive.is_valid().unwrap());
         }
+    }
+
+    #[test]
+    fn test_duplicate_file_entries_replacement() {
+        let entry1 = ThorFileEntry {
+            size_compressed: 100,
+            size: 200,
+            relative_path: "test\\file.txt".to_string(),
+            is_removed: false,
+            offset: 1000,
+        };
+        let entry2 = ThorFileEntry {
+            size_compressed: 150,
+            size: 250,
+            relative_path: "test\\file.txt".to_string(),
+            is_removed: true,
+            offset: 2000,
+        };
+
+        let mut set = HashSet::new();
+        set.replace(entry1);
+        set.replace(entry2);
+
+        assert_eq!(set.len(), 1);
+        let retrieved = set.get("test\\file.txt").unwrap();
+        assert_eq!(retrieved.offset, 2000);
+        assert_eq!(retrieved.size, 250);
+        assert!(retrieved.is_removed);
     }
 }
