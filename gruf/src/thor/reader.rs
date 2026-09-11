@@ -1,5 +1,6 @@
+use std::borrow::Borrow;
 use std::boxed::Box;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -180,15 +181,13 @@ impl<R: Read + Seek> ThorArchive<R> {
     }
 
     pub fn get_entries(&self) -> impl Iterator<Item = &'_ ThorFileEntry> {
-        self.container.entries.values()
+        self.container.entries.iter()
     }
 
     /// Takes the ownership of the entries from the archive.
     /// Leaving the archive entries empty.
-    pub fn take_entries(
-        &mut self,
-    ) -> std::collections::hash_map::IntoValues<String, ThorFileEntry> {
-        std::mem::take(&mut self.container.entries).into_values()
+    pub fn take_entries(&mut self) -> std::collections::hash_set::IntoIter<ThorFileEntry> {
+        std::mem::take(&mut self.container.entries).into_iter()
     }
 
     pub fn get_entry_raw_data_by_entry(&mut self, file_entry: &ThorFileEntry) -> Result<Vec<u8>> {
@@ -252,7 +251,7 @@ impl<R: Read + Seek> ThorArchive<R> {
 pub struct ThorContainer {
     pub header: ThorHeader,
     table: ThorTable,
-    pub entries: HashMap<String, ThorFileEntry>,
+    pub entries: HashSet<ThorFileEntry>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -304,6 +303,12 @@ impl Hash for ThorFileEntry {
 impl PartialEq for ThorFileEntry {
     fn eq(&self, other: &ThorFileEntry) -> bool {
         self.relative_path == other.relative_path
+    }
+}
+
+impl Borrow<str> for ThorFileEntry {
+    fn borrow(&self) -> &str {
+        &self.relative_path
     }
 }
 
@@ -424,9 +429,9 @@ named!(parse_multiple_files_entry<&[u8], ThorFileEntry>,
     )
 ));
 
-named!(parse_multiple_files_entries<&[u8], HashMap<String, ThorFileEntry>>,
-    fold_many1!(parse_multiple_files_entry, HashMap::new(), |mut acc: HashMap<_, _>, item| {
-        acc.insert(item.relative_path.clone(), item);
+named!(parse_multiple_files_entries<&[u8], HashSet<ThorFileEntry>>,
+    fold_many1!(parse_multiple_files_entry, HashSet::new(), |mut acc: HashSet<_>, item| {
+        acc.insert(item);
         acc
     })
 );
@@ -452,10 +457,7 @@ pub fn parse_thor_patch<R: Seek + Read>(reader: &mut R) -> Result<ThorContainer>
             Ok(ThorContainer {
                 header,
                 table: ThorTable::SingleFile(table),
-                entries: [(entry.relative_path.clone(), entry)]
-                    .iter()
-                    .cloned()
-                    .collect(),
+                entries: [entry].into_iter().collect(),
             })
         }
         ThorMode::MultipleFiles => {
@@ -476,7 +478,7 @@ pub fn parse_thor_patch<R: Seek + Read>(reader: &mut R) -> Result<ThorContainer>
             let decompressed_size = decoder.read_to_end(&mut decompressed_table)?;
             // Parse multiple entries
             let entries = match decompressed_size {
-                0 => HashMap::new(), // No entries
+                0 => HashSet::new(), // No entries
                 _ => {
                     let (_, entries) = parse_multiple_files_entries(decompressed_table.as_slice())
                         .map_err(|_| {
